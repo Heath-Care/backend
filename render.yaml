@@ -1,0 +1,86 @@
+# Render Blueprint for PRECURSOR-X
+# PostgreSQL + FastAPI (Python) + Vite React static frontend.
+# Reference: https://render.com/docs/blueprint-spec
+#
+# FIRST-DEPLOY CHECKLIST (values Render cannot know in advance):
+#   1. GROQ_API_KEY   -> paste your Groq key when the Blueprint prompts (sync: false, never committed).
+#   2. CORS_ORIGINS   -> the ACTUAL public URL of the frontend service, e.g.
+#                        https://precursor-x-frontend.onrender.com  (no trailing slash, no "*").
+#                        If Render appended a suffix to the service name, use the URL shown in the dashboard.
+#                        The backend REFUSES TO START in production without an https:// origin here.
+#   3. Confirm the built frontend calls https://<backend-host>/api/v1 (see VITE_API_BASE_URL note below).
+
+version: "1"
+
+databases:
+  - name: precursor-x-db
+    databaseName: precursor_x
+    user: precursor_user
+    plan: free            # NOTE: Render free Postgres instances expire (~30 days). Use a paid plan for real data.
+    region: oregon
+    postgresMajorVersion: "16"
+
+services:
+  # 1. FastAPI REST API
+  - type: web
+    name: precursor-x-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    # Migrations + idempotent seed run at START (runtime has database access; free plan has no preDeployCommand).
+    #  - `alembic upgrade head`   : applies only missing migrations, never drops data.
+    #  - `python -m app.db.seed`  : per-table "seed only if the table is empty"; never overwrites existing rows.
+    # If either command fails the container exits and the deploy's health check fails (fail-fast).
+    startCommand: "alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: precursor-x-db
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      # Frontend (*.onrender.com) and backend (*.onrender.com) are different SITES, so the auth cookie must be
+      # SameSite=None; Secure to be sent on cross-origin fetch(). (Safari/ITP may still block third-party cookies:
+      # use a custom domain with a shared parent, e.g. app.example.com + api.example.com, for full browser coverage.)
+      - key: AUTH_COOKIE_SAMESITE
+        value: none
+      - key: CORS_ORIGINS
+        sync: false      # set to the deployed frontend origin, e.g. https://precursor-x-frontend.onrender.com
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+
+  # 2. Vite React SPA frontend (static site)
+  - type: web
+    name: precursor-x-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: ./dist
+    routes:
+      # Single-Page Application rewrite (deep links such as /dashboard must serve index.html)
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Build-time value baked into the bundle by Vite. src/services/httpClient.ts appends /api/v1 to a bare origin,
+      # so https://<backend>.onrender.com becomes https://<backend>.onrender.com/api/v1.
+      # fromService/envVarKey is the documented Blueprint mechanism for copying another service's env var;
+      # RENDER_EXTERNAL_URL is Render-provided. If the built site ever calls a relative /api/v1 instead, replace this
+      # entry with:  - key: VITE_API_BASE_URL / value: https://<your-backend-host>/api/v1
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: precursor-x-backend
+          envVarKey: RENDER_EXTERNAL_URL
