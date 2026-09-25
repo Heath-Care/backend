@@ -18,7 +18,7 @@ export const AuthModal: React.FC = () => {
   // Status State
   const [isLoading, setIsLoading] = useState(false);
   const [errorStatus, setErrorStatus] = useState<
-    'idle' | 'validation_error' | 'invalid_credentials' | 'backend_unavailable' | 'success'
+    'idle' | 'validation_error' | 'invalid_credentials' | 'backend_unavailable' | 'session_error' | 'success'
   >('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -62,7 +62,12 @@ export const AuthModal: React.FC = () => {
     } catch (err: any) {
       setIsLoading(false);
       if (err instanceof ApiClientError) {
-        if (err.isOffline || err.status === 0) {
+        if (err.endpoint === '/auth/me') {
+          // Credentials were correct (login/register succeeded) but the follow-up session
+          // check failed — this is a cookie/session problem, not bad credentials.
+          setErrorStatus('session_error');
+          setErrorMessage(err.message);
+        } else if (err.isOffline || err.status === 0) {
           setErrorStatus('backend_unavailable');
           setErrorMessage('FastAPI backend offline on port 8000. Ensure uvicorn server is running.');
         } else if (err.status === 401) {
@@ -134,7 +139,10 @@ export const AuthModal: React.FC = () => {
     } catch (err: any) {
       setIsLoading(false);
       if (err instanceof ApiClientError) {
-        if (err.isOffline || err.status === 0) {
+        if (err.endpoint === '/auth/me') {
+          setErrorStatus('session_error');
+          setErrorMessage(err.message);
+        } else if (err.isOffline || err.status === 0) {
           setErrorStatus('backend_unavailable');
           setErrorMessage('FastAPI backend is offline on port 8000.');
         } else if (err.status === 409) {
@@ -218,6 +226,15 @@ export const AuthModal: React.FC = () => {
                 <CloudOff className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div>
                   <div className="text-rose-400 font-bold">BACKEND UNAVAILABLE (PORT 8000)</div>
+                  <div className="text-slate-400 text-[11px] mt-0.5">{errorMessage}</div>
+                </div>
+              </div>
+            )}
+            {errorStatus === 'session_error' && (
+              <div className="mb-4 p-3 rounded bg-amber-950/60 border border-amber-500/60 flex items-start gap-2 text-xs font-mono text-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-amber-300 font-bold">SESSION NOT ESTABLISHED</div>
                   <div className="text-slate-400 text-[11px] mt-0.5">{errorMessage}</div>
                 </div>
               </div>
@@ -317,6 +334,15 @@ export const AuthModal: React.FC = () => {
                 <CloudOff className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div>
                   <div className="text-rose-400 font-bold">BACKEND UNAVAILABLE</div>
+                  <div className="text-slate-400 text-[11px] mt-0.5">{errorMessage}</div>
+                </div>
+              </div>
+            )}
+            {errorStatus === 'session_error' && (
+              <div className="mb-4 p-3 rounded bg-amber-950/60 border border-amber-500/60 flex items-start gap-2 text-xs font-mono text-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-amber-300 font-bold">SESSION NOT ESTABLISHED</div>
                   <div className="text-slate-400 text-[11px] mt-0.5">{errorMessage}</div>
                 </div>
               </div>

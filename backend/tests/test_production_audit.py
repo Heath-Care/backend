@@ -4,6 +4,11 @@ Pre-deployment audit tests for PRECURSOR-X.
 Complements tests/test_api.py with the behaviours required before a production deploy:
   * Auth: PostgreSQL user creation, Argon2id hash, HttpOnly cookie, no token in JSON, /auth/me, logout,
     inactive accounts, role escalation on self-registration.
+  * Auth session lifecycle: full login -> /auth/me -> protected-endpoint chain, missing-cookie 401,
+    safe audit logging (cookie presence / SameSite / Secure / Path / result, never the token or password),
+    and single-source-of-truth AUTH_SECRET_KEY behaviour across a settings instance.
+  * Same-origin proxy: the frontend's render.yaml rewrite rule that keeps the auth cookie first-party
+    on *.onrender.com, and the httpClient default that relies on it.
   * Human Review governance: reviewer identity is ALWAYS the authenticated user (spoofed fields ignored),
     reviewer_user_id / notes / decision / timestamp / adjusted SIF persisted, audit trail complete.
   * Groq failure never produces fabricated analysis; successful analysis is persisted with unique identifiers.
@@ -182,6 +187,118 @@ def test_tampered_or_garbage_cookie_is_rejected():
     c = TestClient(app)
     c.cookies.set("access_token", "not.a.jwt")
     assert c.get("/api/v1/auth/me").status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# 1b. AUTH SESSION LIFECYCLE: login -> cookie -> /auth/me -> protected endpoint,
+#     missing-cookie 401, and safe (non-secret-leaking) audit logging.
+# ---------------------------------------------------------------------------
+
+def test_full_session_chain_login_cookie_me_and_protected_dashboard(caplog):
+    """
+    End-to-end proof of the exact chain the bug report asked us to verify:
+    login -> Set-Cookie -> browser resends cookie -> /auth/me -> protected dashboard route.
+    (TestClient's cookie jar behaves like a same-site browser here; the *.onrender.com
+    third-party-cookie failure mode this fix addresses only reproduces with a real browser
+    making a genuinely cross-site request, which is exactly why the render.yaml same-origin
+    proxy — not a cookie-attribute change — is the fix; see test_render_yaml_* below.)
+    """
+    email = f"chain.{uuid.uuid4().hex[:10]}@precursorx.internal"
+    c = TestClient(app)
+
+    reg = c.post(
+        "/api/v1/auth/register",
+        json={"full_name": "Chain Test User", "email": email, "password": PASSWORD, "confirm_password": PASSWORD},
+    )
+    assert reg.status_code == 201
+    assert "set-cookie" in {k.lower() for k in reg.headers.keys()}
+
+    with caplog.at_level("INFO", logger="precursor_x.auth"):
+        login = TestClient(app)  # fresh client -> proves cookie survives to a NEW request cycle
+        # (re-login on the same email to also exercise the /auth/login code path, not just /auth/register)
+        login_res = login.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    assert login_res.status_code == 200
+    set_cookie_header = " ".join(login_res.headers.get_list("set-cookie"))
+    assert "access_token=" in set_cookie_header
+
+    me = login.get("/api/v1/auth/me")
+    assert me.status_code == 200
+    assert me.json()["email"] == email
+
+    dashboard = login.get("/api/v1/dashboard/summary")
+    assert dashboard.status_code == 200
+
+    # Login success was logged with cookie metadata, never the token itself.
+    login_logs = [r.message for r in caplog.records if r.name == "precursor_x.auth"]
+    assert any("auth.login.success" in m and "set_cookie=true" in m for m in login_logs)
+    assert any(f"cookie_name={settings.AUTH_COOKIE_NAME}" in m for m in login_logs)
+    assert any(f"samesite={settings.AUTH_COOKIE_SAMESITE}" in m for m in login_logs)
+    token_value = login.cookies.get("access_token")
+    assert token_value not in " ".join(login_logs)
+    assert PASSWORD not in " ".join(login_logs)
+
+
+def test_missing_cookie_returns_401_on_me_and_dashboard():
+    anon = TestClient(app)
+    me = anon.get("/api/v1/auth/me")
+    assert me.status_code == 401
+    dash = anon.get("/api/v1/dashboard/summary")
+    assert dash.status_code == 401
+
+
+def test_auth_check_logs_cookie_presence_and_result_without_leaking_token(caplog):
+    c, email, _ = _new_user("Audit Log User")
+    token_value = c.cookies.get("access_token")
+    assert token_value
+
+    with caplog.at_level("INFO", logger="precursor_x.deps"):
+        res = c.get("/api/v1/auth/me")
+    assert res.status_code == 200
+
+    deps_logs = [r.message for r in caplog.records if r.name == "precursor_x.deps"]
+    assert any("auth.check" in m and "cookie_present=True" in m and "result=200_authenticated" in m for m in deps_logs)
+    # The JWT value itself must never appear in logs.
+    assert token_value not in " ".join(deps_logs)
+
+
+def test_auth_check_logs_no_credentials_for_anonymous_request(caplog):
+    anon = TestClient(app)
+    with caplog.at_level("INFO", logger="precursor_x.deps"):
+        res = anon.get("/api/v1/auth/me")
+    assert res.status_code == 401
+
+    deps_logs = [r.message for r in caplog.records if r.name == "precursor_x.deps"]
+    assert any("cookie_present=False" in m and "result=401_no_credentials" in m for m in deps_logs)
+
+
+def test_auth_secret_key_is_single_source_of_truth_for_token_validity():
+    """
+    Proves create_access_token and decode_access_token both defer to the same live
+    `settings` object, so as long as every worker/instance of the backend process shares
+    one AUTH_SECRET_KEY value (render.yaml uses `generateValue: true`, which Render
+    generates ONCE per service and reuses across restarts/instances), a token issued by
+    login is valid on every subsequent request. If the key were ever inconsistent between
+    instances, decode_access_token fails closed (returns None -> 401) rather than silently
+    accepting or crashing.
+    """
+    from app.core.config import settings as live_settings
+    from app.core.security import create_access_token, decode_access_token
+
+    token = create_access_token({"sub": "usr_test123", "email": "x@y.com", "role": "safety_engineer"})
+    payload = decode_access_token(token)
+    assert payload is not None
+    assert payload["sub"] == "usr_test123"
+
+    original_secret = live_settings.AUTH_SECRET_KEY
+    try:
+        live_settings.AUTH_SECRET_KEY = "a-completely-different-secret-key-of-32-plus-characters!!"
+        assert decode_access_token(token) is None  # fails closed, never a false positive
+    finally:
+        live_settings.AUTH_SECRET_KEY = original_secret
+
+    # And restoring the original secret restores validity (proves the assertion above
+    # was actually exercising the signing key and not some other side effect).
+    assert decode_access_token(token) is not None
 
 
 # ---------------------------------------------------------------------------
@@ -526,3 +643,50 @@ def test_frontend_does_not_send_a_reviewer_identity():
     code = _strip_comments(api_ts.read_text(encoding="utf-8"))
     assert "reviewer:" not in code.split("commitReportGovernance")[1].split("}): Promise")[0]
     assert "_deprecatedReviewer" not in code
+
+
+# ---------------------------------------------------------------------------
+# 10. SAME-ORIGIN PROXY (cross-site cookie fix)
+# ---------------------------------------------------------------------------
+
+RENDER_YAML = Path(__file__).resolve().parents[2] / "render.yaml"
+
+
+def test_render_yaml_proxies_api_before_spa_catchall():
+    if not RENDER_YAML.exists():
+        pytest.skip("render.yaml not present next to backend/")
+    text = RENDER_YAML.read_text(encoding="utf-8")
+
+    api_idx = text.find("source: /api/*")
+    catchall_idx = text.find("source: /*")
+    assert api_idx != -1, "render.yaml must proxy /api/* to the backend"
+    assert catchall_idx != -1, "render.yaml must still serve the SPA catch-all"
+    assert api_idx < catchall_idx, (
+        "The /api/* rewrite MUST be listed before the /* SPA catch-all rewrite "
+        "(Render evaluates rules top-to-bottom, first match wins) or every API "
+        "call would be served index.html instead of being proxied to the backend."
+    )
+    # The proxy destination must be the backend's real origin, not a placeholder.
+    assert "destination: https://precursor-x-backend.onrender.com/api/*" in text
+
+    # VITE_API_BASE_URL must NOT be wired to the backend's own onrender.com URL here:
+    # doing so would make the frontend call the backend directly (cross-site) again,
+    # silently reintroducing the third-party-cookie bug this proxy rule fixes.
+    frontend_block = text[text.find("name: precursor-x-frontend"):]
+    assert "fromService" not in frontend_block or "VITE_API_BASE_URL" not in frontend_block.split("fromService")[0][-40:]
+
+
+def test_http_client_defaults_to_relative_same_origin_api_path():
+    http_client_ts = SRC / "services" / "httpClient.ts" if SRC.exists() else None
+    if http_client_ts is None or not http_client_ts.exists():
+        pytest.skip("frontend src/services/httpClient.ts not present")
+    code = _strip_comments(http_client_ts.read_text(encoding="utf-8"))
+
+    # No explicit override -> must resolve to the relative, same-origin path so the
+    # deployment's own edge proxy (render.yaml in production, Vite dev proxy locally)
+    # handles it, keeping the HttpOnly session cookie first-party.
+    assert "return '/api/v1'" in code or 'return "/api/v1"' in code
+    # Must not silently fall back to an absolute cross-origin onrender.com URL.
+    assert "raw = PRODUCTION_BACKEND_FALLBACK" not in code
+    assert "credentials: 'include'" in code or 'credentials: "include"' in code
+

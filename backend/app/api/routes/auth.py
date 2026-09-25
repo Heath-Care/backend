@@ -32,6 +32,22 @@ logger = logging.getLogger("precursor_x.auth")
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+def _log_cookie_issued(user: User) -> None:
+    """
+    Audit log for successful cookie issuance on login/register.
+    Records ONLY cookie metadata (name, SameSite, Secure, Path) and the fact that
+    Set-Cookie was generated — never the JWT value, password, or AUTH_SECRET_KEY.
+    """
+    logger.info(
+        "auth.login.success user_id=%s set_cookie=true cookie_name=%s samesite=%s secure=%s path=%s",
+        user.id,
+        settings.AUTH_COOKIE_NAME,
+        settings.AUTH_COOKIE_SAMESITE,
+        settings.AUTH_COOKIE_SECURE,
+        settings.AUTH_COOKIE_PATH,
+    )
+
+
 @router.post(
     "/register",
     response_model=AuthResponse,
@@ -99,6 +115,7 @@ def register(
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path=settings.AUTH_COOKIE_PATH,
     )
+    _log_cookie_issued(user)
 
     return AuthResponse(
         user=UserResponse.model_validate(user),
@@ -154,6 +171,7 @@ def login(
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path=settings.AUTH_COOKIE_PATH,
     )
+    _log_cookie_issued(user)
 
     return AuthResponse(
         user=UserResponse.model_validate(user),

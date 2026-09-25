@@ -8,15 +8,28 @@
 #                        https://precursor-x-frontend.onrender.com  (no trailing slash, no "*").
 #                        If Render appended a suffix to the service name, use the URL shown in the dashboard.
 #                        The backend REFUSES TO START in production without an https:// origin here.
-#   3. Confirm the built frontend calls https://<backend-host>/api/v1 (see VITE_API_BASE_URL note below).
-
+#   3. Confirm the built frontend calls same-origin /api/v1 (see the "routes" rewrite rule
+#      below, and the VITE_API_BASE_URL note under the frontend service).
+#
+# WHY THE REWRITE RULE BELOW EXISTS (cross-site cookie fix):
+#   onrender.com is on the public suffix list, so precursor-x-frontend.onrender.com and
+#   precursor-x-backend.onrender.com are different *sites* to a browser, even though both
+#   are subdomains of onrender.com. That means a session cookie set by a *direct* fetch from
+#   the frontend straight to the backend's own onrender.com URL is a third-party cookie, and
+#   browsers increasingly refuse to store it (this reproduces reliably: POST /auth/login
+#   returns 200 with a Set-Cookie header, but the browser silently discards it, so every
+#   following request comes back 401 as if no cookie was ever set). The fix is to make every
+#   API call same-origin from the browser's point of view: the frontend calls its own origin's
+#   /api/v1/*, and Render's edge transparently proxies that to the backend server-to-server.
+#   The Set-Cookie response then comes back "from" precursor-x-frontend.onrender.com itself,
+#   so it's a first-party cookie and is reliably stored and resent.
 version: "1"
 
 databases:
   - name: precursor-x-db
     databaseName: precursor_x
     user: precursor_user
-    plan: free            # NOTE: Render free Postgres instances expire (~30 days). Use a paid plan for real data.
+    plan: free
     region: oregon
     postgresMajorVersion: "16"
 
@@ -29,10 +42,6 @@ services:
     plan: free
     rootDir: backend
     buildCommand: "pip install -r requirements.txt"
-    # Migrations + idempotent seed run at START (runtime has database access; free plan has no preDeployCommand).
-    #  - `alembic upgrade head`   : applies only missing migrations, never drops data.
-    #  - `python -m app.db.seed`  : per-table "seed only if the table is empty"; never overwrites existing rows.
-    # If either command fails the container exits and the deploy's health check fails (fail-fast).
     startCommand: "alembic upgrade head && python -m app.db.seed && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /api/v1/health
     envVars:
@@ -48,13 +57,10 @@ services:
         value: production
       - key: DEBUG
         value: "false"
-      # Frontend (*.onrender.com) and backend (*.onrender.com) are different SITES, so the auth cookie must be
-      # SameSite=None; Secure to be sent on cross-origin fetch(). (Safari/ITP may still block third-party cookies:
-      # use a custom domain with a shared parent, e.g. app.example.com + api.example.com, for full browser coverage.)
       - key: AUTH_COOKIE_SAMESITE
         value: none
       - key: CORS_ORIGINS
-        sync: false      # set to the deployed frontend origin, e.g. https://precursor-x-frontend.onrender.com
+        sync: false
       - key: AUTH_SECRET_KEY
         generateValue: true
 
@@ -62,25 +68,28 @@ services:
   - type: web
     name: precursor-x-frontend
     runtime: static
-    region: oregon
-    plan: free
     buildCommand: "npm install && npm run build"
     staticPublishPath: ./dist
     routes:
-      # Single-Page Application rewrite (deep links such as /dashboard must serve index.html)
+      # IMPORTANT: order matters (first match wins). /api/* MUST come before the
+      # SPA catch-all, or every API call would instead be rewritten to index.html.
+      # This proxies API calls through the frontend's own origin so the HttpOnly
+      # session cookie is first-party (see the note above this service).
+      - type: rewrite
+        source: /api/*
+        destination: https://precursor-x-backend.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html
     envVars:
       - key: NODE_VERSION
-        value: "22"
-      # Build-time value baked into the bundle by Vite. src/services/httpClient.ts appends /api/v1 to a bare origin,
-      # so https://<backend>.onrender.com becomes https://<backend>.onrender.com/api/v1.
-      # fromService/envVarKey is the documented Blueprint mechanism for copying another service's env var;
-      # RENDER_EXTERNAL_URL is Render-provided. If the built site ever calls a relative /api/v1 instead, replace this
-      # entry with:  - key: VITE_API_BASE_URL / value: https://<your-backend-host>/api/v1
-      - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: precursor-x-backend
-          envVarKey: RENDER_EXTERNAL_URL
+        value: "22.22.0"
+      # VITE_API_BASE_URL is intentionally NOT set here. When unset, the frontend
+      # calls its own origin's relative /api/v1, which the rewrite rule above
+      # proxies to the backend — keeping the auth cookie first-party. Only set
+      # this var if you explicitly want the frontend to call the backend's
+      # onrender.com URL directly instead of through the proxy; doing so
+      # reintroduces the cross-site (third-party) cookie problem described above.
+      # NOTE: if VITE_API_BASE_URL was previously set to the backend's URL in the
+      # Render Dashboard, you must manually clear it there — Blueprint syncs do
+      # not delete existing env vars that are simply omitted from this file.

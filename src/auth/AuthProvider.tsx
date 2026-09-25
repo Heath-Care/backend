@@ -62,17 +62,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // After login/register, the backend has issued an HttpOnly session cookie — but that cookie
+  // is invisible to JavaScript, so a 200 response here does NOT guarantee the browser actually
+  // kept it (e.g. it may have been silently discarded as a third-party cookie). Re-verify the
+  // session against the authoritative /auth/me endpoint before treating the user as
+  // authenticated, so a "succeeded but no session" case surfaces its own clear error instead of
+  // the app silently believing the user is logged in.
+  const establishVerifiedSession = useCallback(async () => {
+    try {
+      const verifiedUser = await authService.getCurrentUser();
+      setUser(verifiedUser);
+    } catch (err: any) {
+      setUser(null);
+      const status = err instanceof ApiClientError ? err.status : 0;
+      throw new ApiClientError({
+        status,
+        message:
+          'Your credentials were accepted, but the browser did not retain the session. ' +
+          'This is usually caused by browser cookie/privacy settings blocking the ' +
+          'authentication cookie. Please check your cookie settings and try again.',
+        isOffline: false,
+        endpoint: '/auth/me'
+      });
+    }
+  }, []);
+
   const login = useCallback(async (email: string, pass: string) => {
     setError(null);
-    const res = await authService.login({ email, password: pass });
-    setUser(res.user);
-  }, []);
+    await authService.login({ email, password: pass });
+    await establishVerifiedSession();
+  }, [establishVerifiedSession]);
 
   const register = useCallback(async (payload: RegisterPayload) => {
     setError(null);
-    const res = await authService.register(payload);
-    setUser(res.user);
-  }, []);
+    await authService.register(payload);
+    await establishVerifiedSession();
+  }, [establishVerifiedSession]);
 
   const logout = useCallback(async () => {
     try {

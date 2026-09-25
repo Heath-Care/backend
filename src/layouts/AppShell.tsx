@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { api } from '../services/api';
+import { api, API_BASE_URL } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
 
 export const AppShell: React.FC = () => {
@@ -506,11 +506,11 @@ export const AppShell: React.FC = () => {
                       </div>
                       <div className="flex justify-between items-center text-on-surface-variant">
                         <span>Environment:</span>
-                        <span className="text-on-surface font-mono">Development</span>
+                        <span className="text-on-surface font-mono">{import.meta.env.PROD ? 'Production' : 'Development'}</span>
                       </div>
                       <div className="flex justify-between items-center text-on-surface-variant">
                         <span>API Base URL:</span>
-                        <span className="text-primary font-mono">/api/v1 (Port 8000)</span>
+                        <span className="text-primary font-mono">{API_BASE_URL}</span>
                       </div>
                       <div className="flex justify-between items-center text-on-surface-variant">
                         <span>Data Engine:</span>
