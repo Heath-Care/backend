@@ -361,7 +361,7 @@ def test_authenticated_report_analyzer(authenticated_client):
         annotatedTokens=[AnnotatedTokenItem(id="tok-1", text="without secondary gas sniff", type="critical-precursor", description="Atmospheric breach")],
         tokensDetectedCount=1,
         processingTimeMs=240,
-        ai_model="llama-3.3-70b-versatile",
+        ai_model="openai/gpt-oss-120b",
         source="AI INFERENCE"
     )
     with patch("app.services.report_service.report_service.analyze_report", new=AsyncMock(return_value=mock_analysis)):

@@ -314,7 +314,7 @@ export const SafetyMemoryPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 gap-space-lg">
           {results.map((item) => {
-            const isActualized = item.sifClassification.toLowerCase().includes('actualized');
+            const isActualized = (item.sifClassification || '').toLowerCase().includes('actualized');
             const isCritical = item.sifPotential === 'CRITICAL';
 
             const borderColor = isActualized
@@ -342,10 +342,10 @@ export const SafetyMemoryPage: React.FC = () => {
                           : 'bg-surface-container-high text-primary'
                       }`}
                     >
-                      {item.sifClassification}
+                      {item.sifClassification || 'UNCLASSIFIED'}
                     </span>
                     <span className="font-label-code-sm text-label-code-sm text-outline">
-                      {item.date} • {item.facility} ({item.unit})
+                      {item.date || 'N/A'} • {item.facility}{item.unit ? ` (${item.unit})` : ''}
                     </span>
                   </div>
 
@@ -381,7 +381,7 @@ export const SafetyMemoryPage: React.FC = () => {
                   <span className="font-label-code-sm text-label-code-sm text-outline mr-1">
                     Precursor Vectors:
                   </span>
-                  {item.extractedPrecursors.map((p, idx) => (
+                  {(item.extractedPrecursors || []).map((p, idx) => (
                     <span
                       key={idx}
                       className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-code-sm text-[11px] border border-surface-container-high/40"
@@ -458,7 +458,7 @@ export const SafetyMemoryPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-outline text-label-code-sm">{selectedPrecedent.code}</span>
                   <span className="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-code-sm text-[10px] font-bold">
-                    {selectedPrecedent.sifClassification}
+                    {selectedPrecedent.sifClassification || 'UNCLASSIFIED'}
                   </span>
                 </div>
                 <h3 className="font-headline-md text-headline-md text-on-surface font-bold mt-1">
@@ -503,7 +503,7 @@ export const SafetyMemoryPage: React.FC = () => {
                   Precursor Vectors
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedPrecedent.extractedPrecursors.map((p, idx) => (
+                  {(selectedPrecedent.extractedPrecursors || []).map((p, idx) => (
                     <span key={idx} className="px-2.5 py-1 rounded bg-surface-container text-on-surface-variant font-label-code-sm text-xs">
                       {p}
                     </span>
