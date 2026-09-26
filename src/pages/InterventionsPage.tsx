@@ -31,6 +31,33 @@ export const InterventionsPage: React.FC = () => {
     setTimeout(() => setToastMsg(null), 2500);
   };
 
+  // Real CSV export of the CAPA register, built from live interventions state
+  const handleExportRegister = () => {
+    if (interventions.length === 0) {
+      showToast('No interventions to export.');
+      return;
+    }
+    const header = ['Code', 'Title', 'Status', 'Priority', 'Target Facility', 'Owner', 'Due Date', 'Progress %'];
+    const rows = interventions.map((i) => [
+      i.code,
+      i.title,
+      i.status,
+      i.priority || '',
+      i.targetFacility || '',
+      i.owner || '',
+      i.dueDate || '',
+      String(i.progressPct ?? '')
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', 'capa_register.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${interventions.length} CAPA records to CSV.`);
+  };
+
   const loadInterventions = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -189,7 +216,7 @@ export const InterventionsPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-space-sm">
             <button
-              onClick={() => showToast('Exported complete CAPA Register (Excel/CSV)')}
+              onClick={handleExportRegister}
               className="px-space-md py-1.5 rounded bg-surface-container-high text-on-surface hover:bg-surface-bright font-headline-sm text-headline-sm flex items-center gap-space-xs transition-colors border border-surface-container-high/40"
             >
               <span className="material-symbols-outlined text-[18px]">download</span>

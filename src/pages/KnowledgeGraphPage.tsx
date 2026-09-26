@@ -18,6 +18,49 @@ interface GraphNode {
   };
 }
 
+// Logical SVG viewport the graph is drawn into (matches the <svg viewBox> below).
+// Since the <svg> itself scales this viewBox to fill whatever size its container
+// is, normalizing node coordinates into this fixed logical space keeps the graph
+// correctly positioned at every screen size without any resize listeners.
+const GRAPH_VIEW_WIDTH = 920;
+const GRAPH_VIEW_HEIGHT = 520;
+// Padding keeps node circles (radius up to ~32) and their labels from being
+// clipped at the viewport edge.
+const GRAPH_PAD_X = 90;
+const GRAPH_PAD_Y = 80;
+
+/**
+ * Maps arbitrary stored node coordinates (which may fall far outside the SVG
+ * viewport — the database is free to store whatever topology/layout hints it
+ * wants) into the graph's visible drawing area, preserving relative spacing.
+ * Falls back to centering when every node shares the same x or y (span = 0).
+ */
+function normalizeCoordinates(rawPoints: Array<{ x: number | null; y: number | null }>) {
+  const xs = rawPoints.map((p) => p.x).filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  const ys = rawPoints.map((p) => p.y).filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+
+  const minX = xs.length ? Math.min(...xs) : 0;
+  const maxX = xs.length ? Math.max(...xs) : 0;
+  const minY = ys.length ? Math.min(...ys) : 0;
+  const maxY = ys.length ? Math.max(...ys) : 0;
+  const spanX = maxX - minX;
+  const spanY = maxY - minY;
+
+  const usableW = GRAPH_VIEW_WIDTH - GRAPH_PAD_X * 2;
+  const usableH = GRAPH_VIEW_HEIGHT - GRAPH_PAD_Y * 2;
+
+  const toX = (val: number | null): number => {
+    if (val === null || !Number.isFinite(val)) return GRAPH_VIEW_WIDTH / 2;
+    return spanX > 0 ? GRAPH_PAD_X + ((val - minX) / spanX) * usableW : GRAPH_VIEW_WIDTH / 2;
+  };
+  const toY = (val: number | null): number => {
+    if (val === null || !Number.isFinite(val)) return GRAPH_VIEW_HEIGHT / 2;
+    return spanY > 0 ? GRAPH_PAD_Y + ((val - minY) / spanY) * usableH : GRAPH_VIEW_HEIGHT / 2;
+  };
+
+  return { toX, toY };
+}
+
 export const KnowledgeGraphPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -42,6 +85,16 @@ export const KnowledgeGraphPage: React.FC = () => {
       const res = await api.getKnowledgeGraph();
       const rawNodes = res.nodes || [];
       setEdges(res.edges || []);
+
+      // Normalize whatever coordinates PostgreSQL returns into the graph's
+      // visible viewport — the DB values themselves are left untouched.
+      const { toX, toY } = normalizeCoordinates(
+        rawNodes.map((n: any) => ({
+          x: typeof n.x === 'number' ? n.x : null,
+          y: typeof n.y === 'number' ? n.y : null
+        }))
+      );
+
       const mappedNodes: GraphNode[] = rawNodes.map((n: any) => {
         let mappedType: GraphNode['type'] = 'hazard';
         if (n.type === 'barrier' || n.type === 'rule') mappedType = 'barrier';
@@ -74,8 +127,8 @@ export const KnowledgeGraphPage: React.FC = () => {
           id: n.id,
           name: n.label || n.name || n.id,
           type: mappedType,
-          x: n.x ?? 300,
-          y: n.y ?? 200,
+          x: toX(typeof n.x === 'number' ? n.x : null),
+          y: toY(typeof n.y === 'number' ? n.y : null),
           status: (n.status || 'nominal') as any,
           description: n.details || n.description || '',
           connections: n.connections || [],
@@ -184,6 +237,22 @@ export const KnowledgeGraphPage: React.FC = () => {
   const selectedNode = useMemo(() => {
     return nodes.find((n) => n.id === selectedNodeId) || nodes[0];
   }, [nodes, selectedNodeId]);
+
+  // Nodes connected to the selected node via the real backend edge list (not the
+  // always-empty per-node `connections` field — see the edge-rendering fix above)
+  const connectedNodes = useMemo(() => {
+    if (!selectedNode) return [];
+    const neighborIds = new Set<string>();
+    edges.forEach((edge) => {
+      const from = edge.from ?? edge.source;
+      const to = edge.to ?? edge.target;
+      if (from === selectedNode.id && to) neighborIds.add(to);
+      else if (to === selectedNode.id && from) neighborIds.add(from);
+    });
+    return Array.from(neighborIds)
+      .map((id) => nodes.find((n) => n.id === id))
+      .filter((n): n is GraphNode => Boolean(n));
+  }, [edges, nodes, selectedNode]);
 
   // Compute node coordinates based on layoutMode
   const layoutNodes = useMemo(() => {
@@ -450,27 +519,29 @@ export const KnowledgeGraphPage: React.FC = () => {
                 transform={`translate(${pan.x}, ${pan.y}) scale(${zoomLevel})`}
                 style={{ transformOrigin: '460px 260px', transition: isDragging ? 'none' : 'transform 0.08s ease-out' }}
               >
-                {/* Connecting Edges */}
-                {layoutNodes.map((node) =>
-                  node.connections.map((targetId) => {
-                    const target = layoutNodes.find((n) => n.id === targetId);
-                    if (!target) return null;
-                    const isHighlighted = selectedNodeId === node.id || selectedNodeId === target.id;
-                    return (
-                      <g key={`${node.id}-${target.id}`}>
-                        <line
-                          stroke={isHighlighted ? '#38bdf8' : '#31353e'}
-                          strokeDasharray={node.type === 'human_factor' ? '4 4' : undefined}
-                          strokeWidth={isHighlighted ? 2.5 : 1.2}
-                          x1={node.x}
-                          x2={target.x}
-                          y1={node.y}
-                          y2={target.y}
-                        />
-                      </g>
-                    );
-                  })
-                )}
+                {/* Connecting Edges (drawn from the real backend edge list, not the
+                    per-node `connections` field — that field is sourced from
+                    node_metadata.connections, which is never populated, so it was
+                    always empty and no lines were ever drawn) */}
+                {edges.map((edge) => {
+                  const source = layoutNodes.find((n) => n.id === (edge.from ?? edge.source));
+                  const target = layoutNodes.find((n) => n.id === (edge.to ?? edge.target));
+                  if (!source || !target) return null;
+                  const isHighlighted = selectedNodeId === source.id || selectedNodeId === target.id;
+                  return (
+                    <g key={edge.id || `${source.id}-${target.id}`}>
+                      <line
+                        stroke={isHighlighted ? '#38bdf8' : '#31353e'}
+                        strokeDasharray={source.type === 'human_factor' ? '4 4' : undefined}
+                        strokeWidth={isHighlighted ? 2.5 : 1.2}
+                        x1={source.x}
+                        x2={target.x}
+                        y1={source.y}
+                        y2={target.y}
+                      />
+                    </g>
+                  );
+                })}
 
                 {/* Nodes */}
                 {filteredNodes.map((node) => {
@@ -673,12 +744,10 @@ export const KnowledgeGraphPage: React.FC = () => {
               Causal Pathway Intersections
             </span>
             <div className="space-y-1.5">
-              {selectedNode.connections.map((targetId) => {
-                const target = nodes.find((n) => n.id === targetId);
-                if (!target) return null;
+              {connectedNodes.map((target) => {
                 return (
                   <div
-                    key={targetId}
+                    key={target.id}
                     onClick={() => setSelectedNodeId(target.id)}
                     className="p-space-sm rounded bg-surface-container hover:bg-surface-container-high transition-colors flex items-center justify-between cursor-pointer border border-surface-container-high/30"
                   >
@@ -696,6 +765,11 @@ export const KnowledgeGraphPage: React.FC = () => {
                   </div>
                 );
               })}
+              {connectedNodes.length === 0 && (
+                <p className="font-body-sm text-body-sm text-outline italic p-space-sm">
+                  No linked entities found in the current topology.
+                </p>
+              )}
             </div>
           </div>
 
@@ -734,17 +808,32 @@ export const KnowledgeGraphPage: React.FC = () => {
           <div className="flex items-center gap-2 pt-space-xs">
             <button
               onClick={() => {
-                showToast(`Loaded Bowtie analysis for ${selectedNode.name}`);
-                navigate('/report-analyzer');
+                const params = new URLSearchParams({ node: selectedNode.name, nodeDesc: selectedNode.description || '' });
+                navigate(`/report-analyzer?${params.toString()}`);
               }}
               className="flex-1 py-1.5 rounded bg-surface-container-high hover:bg-surface-bright text-on-surface font-label-code-sm text-label-code-sm text-center transition-colors border border-surface-container-high/40"
             >
               Analyze in Bowtie
             </button>
             <button
-              onClick={() => {
-                showToast(`Initiated CAPA for ${selectedNode.name}`);
-                navigate('/interventions');
+              onClick={async () => {
+                try {
+                  await api.createIntervention({
+                    title: `CAPA — ${selectedNode.name}`,
+                    description: selectedNode.description || `Intervention initiated from Knowledge Graph node ${selectedNode.name}.`,
+                    targetedVector: selectedNode.type,
+                    priority: selectedNode.status === 'failed' ? 'Critical' : 'Moderate',
+                    status: 'Proposed',
+                    owner: '',
+                    ownerRole: null,
+                    dueDate: null,
+                    progressPct: 0
+                  });
+                  showToast(`CAPA created for ${selectedNode.name}. Persisted to database.`);
+                  navigate('/interventions');
+                } catch (err: any) {
+                  showToast(`Error initiating CAPA: ${err?.message || 'Unknown error'}`);
+                }
               }}
               className="flex-1 py-1.5 rounded bg-primary-container text-on-primary-container hover:bg-primary font-label-code-sm text-label-code-sm font-semibold text-center transition-colors"
             >

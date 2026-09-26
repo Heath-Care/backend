@@ -12,6 +12,7 @@ from .core.config import settings
 from .api.deps import get_current_user
 from .api.routes import (
     health_router,
+    public_router,
     dashboard_router,
     report_analyzer_router,
     risk_intelligence_router,
@@ -73,6 +74,7 @@ app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 # 1. Public endpoints (No session credentials required)
 app.include_router(health_router, prefix=settings.API_PREFIX)
+app.include_router(public_router, prefix=settings.API_PREFIX)
 app.include_router(auth_router, prefix=settings.API_PREFIX)
 
 # 2. Authoritative protected operational endpoints (Strictly require authenticated User session)

@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Groq AI Service Configuration
     GROQ_API_KEY: Union[str, None] = None
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
 
     # Authentication & Session Security (Backend only - never expose to client)
     # Production strictly requires AUTH_SECRET_KEY from environment with minimum 32 chars.

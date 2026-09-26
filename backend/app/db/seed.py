@@ -24,7 +24,7 @@ import sys
 import os
 import logging
 import secrets
-from typing import Optional
+from typing import Optional, Dict
 from datetime import datetime, timezone
 
 # Ensure backend directory is in path
@@ -63,6 +63,14 @@ from app.data.seed_data import (
     INITIAL_REVIEWS,
     WHAT_CHANGED_DATA,
 )
+from app.data.seed_generator import (
+    generate_precursor_observations,
+    generate_risk_observations,
+    generate_additional_reports,
+    generate_additional_memory_records,
+    generate_additional_interventions,
+    generate_additional_reviews,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("seed")
@@ -78,6 +86,17 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
         db = SessionLocal()
         should_close = True
     try:
+        # Pre-compute the synthetic risk-observation set once so Facility.activities/lsr_codes
+        # (used by the Risk Intelligence activity/LSR filters) reflect what's actually generated
+        # below for RiskObservation, instead of a fixed two-value split.
+        facility_risk_lookup = {s["id"]: s.get("riskClassification", "Moderate") for s in SITES_DATA}
+        risk_matrix_seed = generate_risk_observations([s["id"] for s in SITES_DATA], facility_risk_lookup)
+        facility_activities: Dict[str, set] = {}
+        facility_lsr_codes: Dict[str, set] = {}
+        for fac_id, activity, lsr_code, _c, _f, _cnt in risk_matrix_seed:
+            facility_activities.setdefault(fac_id, set()).add(activity)
+            facility_lsr_codes.setdefault(fac_id, set()).add(lsr_code)
+
         # 1. Facilities
         if force or db.query(Facility).count() == 0:
             logger.info("Seeding Facilities...")
@@ -100,8 +119,8 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
                     trend_direction=s.get("trendDirection", "neutral"),
                     risk_classification=s.get("riskClassification", "Stable"),
                     status=s.get("status", "Nominal"),
-                    activities=["confined", "isolation", "hotwork"] if "site-b" in s["id"] else ["isolation", "height"],
-                    lsr_codes=["lsr-01", "lsr-04", "lsr-08"] if "site-b" in s["id"] else ["lsr-01", "lsr-02"]
+                    activities=sorted(facility_activities.get(s["id"], {"isolation"})),
+                    lsr_codes=sorted(facility_lsr_codes.get(s["id"], {"lsr-01"}))
                 )
                 db.merge(site_obj)
             db.commit()
@@ -160,30 +179,19 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
             logger.info("Seeding Precursor Observations...")
             from datetime import timedelta
             now = datetime.now(timezone.utc)
-            obs_seeds = [
-                ("gen-cs-loto-01", "site-b", 5, True, "Atmospheric Sniffer Calibration"),
-                ("gen-cs-loto-01", "site-a", 12, False, "Mechanical LOTO Lockout"),
-                ("gen-cs-loto-01", "site-wolfcamp", 21, True, "Atmospheric Sniffer Calibration"),
-                ("gen-hw-sns-02", "site-b", 4, False, "Fire Watch Exclusion Zone"),
-                ("gen-hw-sns-02", "site-c", 18, True, "Combustible LEL Detector"),
-                ("gen-rig-lift-11", "site-a", 3, True, "Tagline Rigging Integrity"),
-                ("gen-rig-lift-11", "site-c", 9, False, "Blind Lift Spotter"),
-                ("gen-rig-lift-11", "site-wolfcamp", 16, False, "Blind Lift Spotter"),
-                ("gen-isol-pr-04", "site-b", 2, True, "Spectacle Blind Reversal"),
-                ("gen-isol-pr-04", "site-perdido", 14, False, "Pressure Gauge Bleed-Off"),
-                ("gen-isol-pr-04", "site-clair-ridge", 6, True, "Flange Bolt Torque Spec"),
-                ("gen-isol-pr-04", "site-troll-a", 22, False, "Gasket Integrity Check")
-            ]
+            pattern_ids = [p["id"] for p in PRECURSOR_PATTERNS]
+            facility_ids = [s["id"] for s in SITES_DATA]
+            obs_seeds = generate_precursor_observations(pattern_ids, facility_ids)
             for idx, (pat_id, fac_id, days_ago, spike, barrier) in enumerate(obs_seeds):
                 obs_obj = PrecursorObservation(
                     id=f"obs-{idx + 1}",
                     pattern_id=pat_id,
                     facility_id=fac_id,
-                    observation_time=now - timedelta(days=days_ago, hours=idx * 3),
-                    shift="Night" if idx % 2 == 0 else "Day",
+                    observation_time=now - timedelta(days=days_ago, hours=idx % 24),
+                    shift="Night" if idx % 3 == 0 else ("Day" if idx % 3 == 1 else "Swing"),
                     energy_spike_detected=spike,
                     barrier_failed=barrier,
-                    raw_metadata={"source": "Operational Field Telemetry"}
+                    raw_metadata={"source": "Operational Field Telemetry", "provenance": "SYNTHETIC_SEED"}
                 )
                 db.merge(obs_obj)
             db.commit()
@@ -191,7 +199,25 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
         # 4. Reports & Events
         if force or db.query(SafetyReport).count() == 0:
             logger.info("Seeding Reports & Events...")
-            for idx, r in enumerate(SYNTHETIC_REPORTS):
+            from datetime import timedelta
+            now = datetime.now(timezone.utc)
+            all_reports = list(SYNTHETIC_REPORTS) + generate_additional_reports(SITES_DATA)
+            for idx, r in enumerate(all_reports):
+                # Generated reports carry an explicit recency-skewed daysAgo; the 3 hand-authored
+                # flagship reports carry a real calendar date string instead — parse either into a
+                # concrete created_at so rows land on a real historical spread rather than every
+                # row defaulting to the single instant this script happens to run at.
+                if "daysAgo" in r:
+                    report_time = now - timedelta(days=r["daysAgo"], hours=idx % 24)
+                elif r.get("date"):
+                    try:
+                        y, mo, d = (int(x) for x in r["date"].split("-"))
+                        report_time = datetime(y, mo, d, tzinfo=timezone.utc)
+                    except (ValueError, AttributeError):
+                        report_time = now
+                else:
+                    report_time = now
+
                 rep_obj = SafetyReport(
                     id=r["id"],
                     text=r["description"],
@@ -203,7 +229,8 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
                     confidence=int(r.get("confidence") * 100) if r.get("confidence") is not None else None,
                     ai_model=None,  # Synthetic seed report: was NOT produced by a live Groq call
                     processing_duration_ms=None,
-                    analysis_result=r
+                    analysis_result=r,
+                    created_at=report_time
                 )
                 db.merge(rep_obj)
 
@@ -218,7 +245,8 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
                     severity=r.get("sifPotential", "CRITICAL"),
                     vector=r.get("activity"),
                     consequence=4 if r.get("sifPotential") == "CRITICAL" else 3,
-                    frequency=4
+                    frequency=4,
+                    created_at=report_time
                 )
                 db.merge(ev_obj)
             db.commit()
@@ -226,16 +254,6 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
         # 5. Risk Observations
         if force or db.query(RiskObservation).count() == 0:
             logger.info("Seeding Risk Observations...")
-            risk_matrix_seed = [
-                ("site-b", "confined", "lsr-04", 4, 4, 148),
-                ("site-b", "isolation", "lsr-01", 4, 3, 92),
-                ("site-a", "isolation", "lsr-01", 3, 4, 114),
-                ("site-a", "height", "lsr-02", 3, 3, 76),
-                ("site-c", "confined", "lsr-04", 3, 2, 48),
-                ("site-c", "hotwork", "lsr-08", 4, 2, 39),
-                ("site-d", "isolation", "lsr-01", 2, 3, 52),
-                ("site-perdido", "height", "lsr-02", 4, 3, 67),
-            ]
             for idx, (fac, act, lsr, c, f, cnt) in enumerate(risk_matrix_seed):
                 ro = RiskObservation(
                     id=f"ro-{idx + 1}",
@@ -252,7 +270,8 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
         # 6. Safety Memory
         if force or db.query(SafetyMemoryRecord).count() == 0:
             logger.info("Seeding Safety Memory Precedents...")
-            for m in SAFETY_MEMORY_DATA:
+            all_memory = list(SAFETY_MEMORY_DATA) + generate_additional_memory_records(SITES_DATA)
+            for m in all_memory:
                 date_str = m.get("date", "")
                 parsed_year = int(date_str.split("-")[0]) if (date_str and "-" in date_str) else m.get("year")
                 mem_obj = SafetyMemoryRecord(
@@ -307,7 +326,8 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
         # 8. Interventions
         if force or db.query(Intervention).count() == 0:
             logger.info("Seeding Interventions...")
-            for it in INITIAL_INTERVENTIONS:
+            all_interventions = list(INITIAL_INTERVENTIONS) + generate_additional_interventions(SITES_DATA)
+            for it in all_interventions:
                 int_obj = Intervention(
                     id=it["id"],
                     code=it["code"],
@@ -338,7 +358,8 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
         # 9. Human Reviews
         if force or db.query(HumanReview).count() == 0:
             logger.info("Seeding Human Reviews...")
-            for rev in INITIAL_REVIEWS:
+            all_reviews = list(INITIAL_REVIEWS) + generate_additional_reviews(SITES_DATA)
+            for rev in all_reviews:
                 raw_opt = rev.get("opticalFeed")
                 opt_feed = None
                 if raw_opt and isinstance(raw_opt, dict):

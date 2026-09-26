@@ -42,7 +42,8 @@
   --color-tertiary-fixed-dim: #b7c8e1;
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-headline: 'Oswald', 'Inter', sans-serif;
 }
 
 /* Custom Spacing Tokens from Stitch */
@@ -106,9 +107,9 @@
 .mt-space-xl { margin-top: 1.5rem; }
 
 /* Font size & line-height tokens from Stitch */
-.font-label-code-sm { font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 12px; letter-spacing: 0.05em; }
-.font-label-code-md { font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 14px; letter-spacing: 0.02em; }
-.font-label-code-lg { font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 18px; letter-spacing: -0.01em; }
+.font-label-code-sm { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 10px; line-height: 12px; letter-spacing: 0.06em; }
+.font-label-code-md { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 11px; line-height: 14px; letter-spacing: 0.03em; }
+.font-label-code-lg { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 13px; line-height: 18px; letter-spacing: -0.01em; }
 
 .text-label-code-sm { font-size: 10px; line-height: 12px; }
 .text-label-code-md { font-size: 11px; line-height: 14px; }
@@ -122,10 +123,10 @@
 .text-body-md { font-size: 13px; line-height: 18px; }
 .text-body-lg { font-size: 15px; line-height: 22px; }
 
-.font-headline-sm { font-family: 'Inter', sans-serif; font-size: 15px; line-height: 20px; font-weight: 600; }
-.font-headline-md { font-family: 'Inter', sans-serif; font-size: 18px; line-height: 24px; font-weight: 600; }
-.font-headline-lg { font-family: 'Inter', sans-serif; font-size: 24px; line-height: 32px; font-weight: 600; }
-.font-headline-xl { font-family: 'Inter', sans-serif; font-size: 32px; line-height: 40px; font-weight: 600; }
+.font-headline-sm { font-family: 'Oswald', 'Inter', sans-serif; font-size: 15px; line-height: 20px; font-weight: 500; letter-spacing: 0.01em; }
+.font-headline-md { font-family: 'Oswald', 'Inter', sans-serif; font-size: 19px; line-height: 24px; font-weight: 500; letter-spacing: 0.01em; }
+.font-headline-lg { font-family: 'Oswald', 'Inter', sans-serif; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: 0.005em; }
+.font-headline-xl { font-family: 'Oswald', 'Inter', sans-serif; font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: 0; }
 
 .text-headline-sm { font-size: 15px; line-height: 20px; }
 .text-headline-md { font-size: 18px; line-height: 24px; }

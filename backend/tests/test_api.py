@@ -85,6 +85,61 @@ def test_public_root_health_endpoint():
     assert data["status"] == "healthy"
 
 
+def test_public_knowledge_graph_summary_is_real_database_derived():
+    """
+    The landing page's Centrality Hub must come from the real PostgreSQL graph
+    topology (via the existing graph_service centrality calculation), not a
+    hardcoded placeholder such as the former "CSE TK-402 (0.89 Rank)".
+    """
+    res = client.get("/api/v1/public/knowledge-graph/summary")
+    assert res.status_code == 200
+    data = res.json()
+
+    assert "nodeCount" in data and isinstance(data["nodeCount"], int)
+    assert "edgeCount" in data and isinstance(data["edgeCount"], int)
+    assert "density" in data
+    assert "centralityHub" in data
+
+    # Seeded test DB has real graph nodes/edges, so a real hub should resolve.
+    if data["nodeCount"] >= 2:
+        assert data["centralityHub"] is not None
+        hub = data["centralityHub"]
+        assert set(hub.keys()) == {"nodeId", "label", "score"}
+        assert isinstance(hub["nodeId"], str) and hub["nodeId"]
+        assert isinstance(hub["label"], str) and hub["label"]
+        assert 0.0 <= hub["score"] <= 1.0
+        # The old hardcoded placeholder must never appear.
+        assert hub["label"] != "CSE TK-402"
+        assert hub["score"] != 0.89
+
+    # Never leaks edges, report content, or other authenticated data.
+    assert "edges" not in data
+    assert "nodes" not in data
+
+
+def test_public_knowledge_graph_summary_centrality_hub_matches_authenticated_graph_max(authenticated_client):
+    """
+    The public centralityHub must be the actual max-centrality node produced by
+    the same graph_service calculation used by the authenticated Knowledge
+    Graph endpoint — proving it's reused, not a second/different algorithm.
+    """
+    public_res = client.get("/api/v1/public/knowledge-graph/summary")
+    assert public_res.status_code == 200
+    hub = public_res.json()["centralityHub"]
+
+    full_res = authenticated_client.get("/api/v1/knowledge-graph")
+    assert full_res.status_code == 200
+    nodes = full_res.json()["nodes"]
+    if not nodes:
+        pytest.skip("no graph nodes seeded")
+
+    expected_top = max(nodes, key=lambda n: n["centrality"])
+    assert hub is not None
+    assert hub["nodeId"] == expected_top["id"]
+    assert hub["label"] == expected_top["label"]
+    assert hub["score"] == expected_top["centrality"]
+
+
 # ---------------------------------------------------------------------------
 # 2. VERIFY EVERY PROTECTED OPERATIONAL ENDPOINT REJECTS ANONYMOUS REQUESTS (HTTP 401)
 # ---------------------------------------------------------------------------
@@ -361,7 +416,7 @@ def test_authenticated_report_analyzer(authenticated_client):
         annotatedTokens=[AnnotatedTokenItem(id="tok-1", text="without secondary gas sniff", type="critical-precursor", description="Atmospheric breach")],
         tokensDetectedCount=1,
         processingTimeMs=240,
-        ai_model="llama-3.3-70b-versatile",
+        ai_model="openai/gpt-oss-120b",
         source="AI INFERENCE"
     )
     with patch("app.services.report_service.report_service.analyze_report", new=AsyncMock(return_value=mock_analysis)):

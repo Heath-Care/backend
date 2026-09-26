@@ -15,10 +15,34 @@ export const SafetyDnaPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [showDetailedTopology, setShowDetailedTopology] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 2500);
+  };
+
+  // Real export of the current pattern set as JSON, built from live backend data
+  const handleExportPatternGenome = () => {
+    if (patterns.length === 0) {
+      showToast('No patterns loaded to export.');
+      return;
+    }
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      patternCount: patterns.length,
+      patterns
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `safety_dna_pattern_genome_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${patterns.length} pattern(s) to Pattern Genome Dossier.`);
   };
 
   const fetchDnaData = useCallback(async () => {
@@ -110,8 +134,8 @@ export const SafetyDnaPage: React.FC = () => {
                 GENOMIC ENGINE CLUSTER
               </span>
               <span className="font-label-code-sm text-label-code-sm text-outline flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
-                SYNCHRONIZED REAL-TIME
+                <span className="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+                POSTGRESQL-BACKED
               </span>
             </div>
             <h1 className="font-headline-xl text-headline-xl text-on-surface tracking-tight font-bold">
@@ -124,14 +148,17 @@ export const SafetyDnaPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-space-sm">
             <button
-              onClick={() => showToast('Re-clustered telemetry points via DBSCAN')}
+              onClick={async () => {
+                await fetchDnaData();
+                showToast(`Re-clustered ${patterns.length} telemetry pattern(s) from backend.`);
+              }}
               className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-surface-container-high text-on-surface font-body-md text-body-md hover:bg-surface-bright transition-colors shadow-sm border border-surface-container-high/40"
             >
               <span className="material-symbols-outlined text-[16px] text-primary">autorenew</span>
               <span>Re-cluster Telemetry</span>
             </button>
             <button
-              onClick={() => showToast('Pattern Genome Dossier exported successfully')}
+              onClick={handleExportPatternGenome}
               className="flex items-center gap-space-xs px-space-md py-space-sm rounded bg-primary text-on-primary font-headline-sm text-headline-sm hover:bg-primary-fixed transition-colors shadow-md"
             >
               <span className="material-symbols-outlined text-[16px]">strikethrough_s</span>
@@ -329,8 +356,15 @@ export const SafetyDnaPage: React.FC = () => {
               <span>SIF S-1 Potential ({selectedPattern.sifScore}%)</span>
             </div>
             <button
-              onClick={() => showToast('Toggled detailed topology spline physics')}
-              className="p-space-xs rounded bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors"
+              onClick={() => {
+                setShowDetailedTopology((prev) => !prev);
+                showToast(`Detailed topology spline rendering ${!showDetailedTopology ? 'enabled' : 'disabled'}`);
+              }}
+              className={`p-space-xs rounded transition-colors ${
+                showDetailedTopology
+                  ? 'bg-primary-container text-on-primary-container'
+                  : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+              }`}
               title="Toggle Detailed Topology"
             >
               <span className="material-symbols-outlined text-[20px]">account_tree</span>
@@ -346,25 +380,18 @@ export const SafetyDnaPage: React.FC = () => {
             viewBox="0 0 960 300"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {/* Splines */}
-            <path d="M 180 150 C 240 150, 250 80, 310 80" stroke="#38bdf8" strokeDasharray="4 4" strokeWidth="2" className="opacity-70" />
-            <path d="M 180 150 C 240 150, 250 220, 310 220" stroke="#38bdf8" strokeDasharray="4 4" strokeWidth="2" className="opacity-70" />
-            <path d="M 490 80 C 540 80, 560 150, 610 150" stroke="#3198dc" strokeWidth="2" />
-            <path d="M 490 220 C 540 220, 560 150, 610 150" stroke="#3198dc" strokeWidth="2" />
-            <path d="M 760 150 L 820 150" stroke="#ffb4ab" strokeWidth="3" />
-
-            {/* Splines */}
-            <path d="M 180 150 C 240 150, 250 80, 310 80" stroke="#38bdf8" strokeDasharray="4 4" strokeWidth="2" className="opacity-70" />
-            <path d="M 180 150 C 240 150, 250 220, 310 220" stroke="#38bdf8" strokeDasharray="4 4" strokeWidth="2" className="opacity-70" />
-            <path d="M 490 80 C 540 80, 560 150, 610 150" stroke="#3198dc" strokeWidth="2" />
-            <path d="M 490 220 C 540 220, 560 150, 610 150" stroke="#3198dc" strokeWidth="2" />
-            <path d="M 760 150 L 820 150" stroke="#ffb4ab" strokeWidth="3" />
+            {/* Splines — solid/thicker when detailed topology is enabled, dashed/thin otherwise */}
+            <path d="M 180 150 C 240 150, 250 80, 310 80" stroke="#38bdf8" strokeDasharray={showDetailedTopology ? undefined : '4 4'} strokeWidth={showDetailedTopology ? 3 : 2} className="opacity-70" />
+            <path d="M 180 150 C 240 150, 250 220, 310 220" stroke="#38bdf8" strokeDasharray={showDetailedTopology ? undefined : '4 4'} strokeWidth={showDetailedTopology ? 3 : 2} className="opacity-70" />
+            <path d="M 490 80 C 540 80, 560 150, 610 150" stroke="#3198dc" strokeWidth={showDetailedTopology ? 3 : 2} />
+            <path d="M 490 220 C 540 220, 560 150, 610 150" stroke="#3198dc" strokeWidth={showDetailedTopology ? 3 : 2} />
+            <path d="M 760 150 L 820 150" stroke="#ffb4ab" strokeWidth={showDetailedTopology ? 4 : 3} />
 
             {/* Node 1: Root Hazard Class */}
             <g className="cursor-pointer group" transform="translate(30, 110)">
               <rect className="group-hover:fill-surface-container-high transition-colors" fill="#1c2028" height="80" rx="8" width="150" />
               <rect fill="#38bdf8" height="80" rx="2" width="4" x="0" y="0" />
-              <text fill="#87929a" fontFamily="JetBrains Mono" fontSize="10" fontWeight="600" x="14" y="24">
+              <text fill="#87929a" fontFamily="IBM Plex Mono" fontSize="10" fontWeight="600" x="14" y="24">
                 HAZARD CLASS
               </text>
               <text fill="#dfe2ee" fontFamily="Inter" fontSize="12" fontWeight="600" x="14" y="44">
@@ -379,7 +406,7 @@ export const SafetyDnaPage: React.FC = () => {
             <g className="cursor-pointer group" transform="translate(310, 40)">
               <rect className="group-hover:fill-surface-container-high transition-colors" fill="#1c2028" height="80" rx="8" width="180" />
               <rect fill="#38bdf8" height="80" rx="2" width="4" x="0" y="0" />
-              <text fill="#8ed5ff" fontFamily="JetBrains Mono" fontSize="10" fontWeight="600" x="14" y="22">
+              <text fill="#8ed5ff" fontFamily="IBM Plex Mono" fontSize="10" fontWeight="600" x="14" y="22">
                 TRIGGER
               </text>
               <text fill="#dfe2ee" fontFamily="Inter" fontSize="12" fontWeight="600" x="14" y="42">
@@ -394,7 +421,7 @@ export const SafetyDnaPage: React.FC = () => {
             <g className="cursor-pointer group" transform="translate(310, 180)">
               <rect className="group-hover:fill-surface-container-high transition-colors" fill="#1c2028" height="80" rx="8" width="180" />
               <rect fill="#38bdf8" height="80" rx="2" width="4" x="0" y="0" />
-              <text fill="#ffdad6" fontFamily="JetBrains Mono" fontSize="10" fontWeight="600" x="14" y="22">
+              <text fill="#ffdad6" fontFamily="IBM Plex Mono" fontSize="10" fontWeight="600" x="14" y="22">
                 PROCEDURAL BREACH
               </text>
               <text fill="#dfe2ee" fontFamily="Inter" fontSize="12" fontWeight="600" x="14" y="42">
@@ -409,7 +436,7 @@ export const SafetyDnaPage: React.FC = () => {
             <g className="cursor-pointer group" transform="translate(610, 110)">
               <rect className="group-hover:fill-surface-container-high transition-colors" fill="#1c2028" height="80" rx="8" width="150" />
               <rect fill="#93ccff" height="80" rx="2" width="4" x="0" y="0" />
-              <text fill="#93ccff" fontFamily="JetBrains Mono" fontSize="10" fontWeight="600" x="14" y="22">
+              <text fill="#93ccff" fontFamily="IBM Plex Mono" fontSize="10" fontWeight="600" x="14" y="22">
                 BEHAVIORAL VARIANCE
               </text>
               <text fill="#dfe2ee" fontFamily="Inter" fontSize="12" fontWeight="600" x="14" y="42">
@@ -423,7 +450,7 @@ export const SafetyDnaPage: React.FC = () => {
             {/* Node 4: SIF Outcome */}
             <g className="cursor-pointer group" transform="translate(820, 110)">
               <rect className="group-hover:fill-error-container transition-colors" fill="#93000a" height="80" rx="8" width="120" />
-              <text fill="#ffdad6" fontFamily="JetBrains Mono" fontSize="10" fontWeight="700" x="14" y="24">
+              <text fill="#ffdad6" fontFamily="IBM Plex Mono" fontSize="10" fontWeight="700" x="14" y="24">
                 SIF OUTCOME
               </text>
               <text fill="#ffdad6" fontFamily="Inter" fontSize="13" fontWeight="700" x="14" y="44">

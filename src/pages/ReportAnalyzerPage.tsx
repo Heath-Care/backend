@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { AIAnalysisResult } from '../services/aiService';
 import { useAuth } from '../auth/AuthProvider';
@@ -26,6 +26,7 @@ const SCENARIOS = {
 export const ReportAnalyzerPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // States
@@ -63,6 +64,22 @@ export const ReportAnalyzerPage: React.FC = () => {
       setToast({ show: false, title: '', desc: '' });
     }, 3200);
   };
+
+  // If arriving from the Knowledge Graph with a specific node, load that node's real
+  // name/description into the console instead of showing a generic default scenario.
+  useEffect(() => {
+    const nodeName = searchParams.get('node');
+    const nodeDesc = searchParams.get('nodeDesc');
+    if (nodeName) {
+      setNarrativeText(
+        nodeDesc
+          ? `[Loaded from Knowledge Graph: ${nodeName}]\n\n${nodeDesc}`
+          : `[Loaded from Knowledge Graph: ${nodeName}]\n\nPaste or describe the operational narrative related to this node to run precursor extraction.`
+      );
+      triggerToast('Loaded from Knowledge Graph', `Console pre-filled with context for "${nodeName}"`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Run NLP analysis
   const executeAnalysis = async (customText?: string) => {
@@ -1214,7 +1231,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                       x="10"
                       y="24"
                     />
-                    <text fill="#dfe2ee" fontFamily="JetBrains Mono" fontSize="9" fontWeight="600" textAnchor="middle" x="52" y="44">
+                    <text fill="#dfe2ee" fontFamily="IBM Plex Mono" fontSize="9" fontWeight="600" textAnchor="middle" x="52" y="44">
                       {(analysisResult?.hazards?.[0]?.name ? analysisResult.hazards[0].name.slice(0, 13) : (analysisResult ? 'NOT RECORDED' : 'AWAITING')).toUpperCase()}
                     </text>
                   </g>
@@ -1228,7 +1245,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                       x="10"
                       y="114"
                     />
-                    <text fill="#dfe2ee" fontFamily="JetBrains Mono" fontSize="9" fontWeight="600" textAnchor="middle" x="52" y="134">
+                    <text fill="#dfe2ee" fontFamily="IBM Plex Mono" fontSize="9" fontWeight="600" textAnchor="middle" x="52" y="134">
                       {(analysisResult?.hazards?.[1]?.name ? analysisResult.hazards[1].name.slice(0, 13) : (analysisResult ? 'NOT RECORDED' : 'AWAITING')).toUpperCase()}
                     </text>
                   </g>
@@ -1250,7 +1267,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                     <text fill="#ffb4ab" fontFamily="Inter" fontSize="9" fontWeight="600" textAnchor="middle" x="192" y="38">
                       {(analysisResult?.barrierFailures?.[0]?.name || (analysisResult ? 'Not identified' : 'Awaiting')).slice(0, 16)}
                     </text>
-                    <text fill="#fca5a5" fontFamily="JetBrains Mono" fontSize="8" textAnchor="middle" x="192" y="50">
+                    <text fill="#fca5a5" fontFamily="IBM Plex Mono" fontSize="8" textAnchor="middle" x="192" y="50">
                       [{analysisResult?.barrierFailures?.[0]?.status || (analysisResult ? 'Not available' : 'N/A')}]
                     </text>
                   </g>
@@ -1272,7 +1289,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                     <text fill="#ffb4ab" fontFamily="Inter" fontSize="9" fontWeight="600" textAnchor="middle" x="192" y="128">
                       {(analysisResult?.barrierFailures?.[1]?.name || (analysisResult ? 'Not identified' : 'Awaiting')).slice(0, 16)}
                     </text>
-                    <text fill="#fca5a5" fontFamily="JetBrains Mono" fontSize="8" textAnchor="middle" x="192" y="140">
+                    <text fill="#fca5a5" fontFamily="IBM Plex Mono" fontSize="8" textAnchor="middle" x="192" y="140">
                       [{analysisResult?.barrierFailures?.[1]?.status || (analysisResult ? 'Not available' : 'N/A')}]
                     </text>
                   </g>
@@ -1289,7 +1306,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                     <text fill="#dfe2ee" fontFamily="Inter" fontSize="8" fontWeight="700" textAnchor="middle" x="310" y="81">
                       TOP EVENT
                     </text>
-                    <text fill="#38bdf8" fontFamily="JetBrains Mono" fontSize="7" textAnchor="middle" x="310" y="93">
+                    <text fill="#38bdf8" fontFamily="IBM Plex Mono" fontSize="7" textAnchor="middle" x="310" y="93">
                       {(analysisResult?.title ? analysisResult.title.slice(0, 14) : (analysisResult ? 'Not Recorded' : 'Awaiting'))}
                     </text>
                   </g>
@@ -1311,7 +1328,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                     <text fill="#a7f3d0" fontFamily="Inter" fontSize="9" fontWeight="600" textAnchor="middle" x="427" y="38">
                       {(analysisResult?.mitigatingControls?.[0]?.name || (analysisResult ? 'Not identified' : 'Awaiting')).slice(0, 16)}
                     </text>
-                    <text fill="#34d399" fontFamily="JetBrains Mono" fontSize="8" textAnchor="middle" x="427" y="50">
+                    <text fill="#34d399" fontFamily="IBM Plex Mono" fontSize="8" textAnchor="middle" x="427" y="50">
                       [{analysisResult?.mitigatingControls?.[0]?.status || (analysisResult ? 'Not available' : 'N/A')}]
                     </text>
                   </g>
@@ -1333,7 +1350,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                     <text fill="#bdc8d1" fontFamily="Inter" fontSize="9" fontWeight="600" textAnchor="middle" x="427" y="128">
                       {(analysisResult?.mitigatingControls?.[1]?.name || (analysisResult ? 'Not identified' : 'Awaiting')).slice(0, 16)}
                     </text>
-                    <text fill="#87929a" fontFamily="JetBrains Mono" fontSize="8" textAnchor="middle" x="427" y="140">
+                    <text fill="#87929a" fontFamily="IBM Plex Mono" fontSize="8" textAnchor="middle" x="427" y="140">
                       [{analysisResult?.mitigatingControls?.[1]?.status || (analysisResult ? 'Not available' : 'N/A')}]
                     </text>
                   </g>
@@ -1351,7 +1368,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                     <text fill="#38bdf8" fontFamily="Inter" fontSize="9" fontWeight="600" textAnchor="middle" x="567" y="38">
                       {(analysisResult?.consequences?.[1]?.title || (analysisResult ? 'Not identified' : 'Awaiting')).slice(0, 13)}
                     </text>
-                    <text fill="#93ccff" fontFamily="JetBrains Mono" fontSize="8" textAnchor="middle" x="567" y="49">
+                    <text fill="#93ccff" fontFamily="IBM Plex Mono" fontSize="8" textAnchor="middle" x="567" y="49">
                       {analysisResult ? (analysisResult.consequences?.[1]?.regulatoryTier || 'Outcome Tier') : 'No Data'}
                     </text>
                   </g>
@@ -1368,7 +1385,7 @@ export const ReportAnalyzerPage: React.FC = () => {
                     <text fill="#ffb4ab" fontFamily="Inter" fontSize="9" fontWeight="600" textAnchor="middle" x="567" y="128">
                       {(analysisResult?.consequences?.[0]?.title || (analysisResult ? 'Not identified' : 'Awaiting')).slice(0, 13)}
                     </text>
-                    <text fill="#fca5a5" fontFamily="JetBrains Mono" fontSize="8" textAnchor="middle" x="567" y="139">
+                    <text fill="#fca5a5" fontFamily="IBM Plex Mono" fontSize="8" textAnchor="middle" x="567" y="139">
                       {analysisResult ? (analysisResult.consequences?.[0]?.severity || 'Consequence') : 'No Data'}
                     </text>
                   </g>

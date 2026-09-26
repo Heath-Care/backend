@@ -237,7 +237,7 @@ export const TelemetryNetworkCanvas: React.FC = () => {
 
           // Technical label
           if (p1.nodeLabel && width > 768) {
-            ctx.font = '9px "JetBrains Mono", monospace';
+            ctx.font = '9px "IBM Plex Mono", monospace';
             ctx.fillStyle = 'rgba(142, 213, 255, 0.65)';
             ctx.fillText(p1.nodeLabel, p1.x + 8, p1.y - 6);
           }

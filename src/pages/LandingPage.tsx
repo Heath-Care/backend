@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { ParticleCanvas } from '../components/landing/ParticleCanvas';
+import { api, PublicKnowledgeGraphSummary } from '../services/api';
 
 export const LandingPage: React.FC = () => {
   const { isAuthenticated, openLoginModal, openRegisterModal } = useAuth();
@@ -29,6 +30,29 @@ export const LandingPage: React.FC = () => {
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Real PostgreSQL-backed graph telemetry for the public landing page.
+  // 'loading' until the first response; 'error' if the public endpoint is
+  // unreachable — in both cases we show a neutral state, never a fabricated number.
+  const [graphSummary, setGraphSummary] = useState<PublicKnowledgeGraphSummary | null>(null);
+  const [graphSummaryStatus, setGraphSummaryStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getPublicKnowledgeGraphSummary()
+      .then((res) => {
+        if (cancelled) return;
+        setGraphSummary(res);
+        setGraphSummaryStatus('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setGraphSummaryStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const mobileNavItems = [
     {
@@ -385,10 +409,10 @@ export const LandingPage: React.FC = () => {
                   <g transform="translate(80,60)">
                     <circle r="18" fill="#0f172a" stroke="#38bdf8" strokeWidth="2" />
                     <circle r="6" fill="#38bdf8" filter="url(#glow)" />
-                    <text y="-25" textAnchor="middle" fill="#94a3b8" fontSize="10" fontFamily="JetBrains Mono">
+                    <text y="-25" textAnchor="middle" fill="#94a3b8" fontSize="10" fontFamily="IBM Plex Mono">
                       EVENT
                     </text>
-                    <text y="30" textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="JetBrains Mono">
+                    <text y="30" textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="IBM Plex Mono">
                       #NM-0941
                     </text>
                   </g>
@@ -403,11 +427,11 @@ export const LandingPage: React.FC = () => {
                       fill="#fde68a"
                       fontWeight="bold"
                       fontSize="11"
-                      fontFamily="JetBrains Mono"
+                      fontFamily="IBM Plex Mono"
                     >
                       PRECURSOR
                     </text>
-                    <text y="42" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="JetBrains Mono">
+                    <text y="42" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="IBM Plex Mono">
                       PREC-219 [TK-402 H2S]
                     </text>
                   </g>
@@ -416,10 +440,10 @@ export const LandingPage: React.FC = () => {
                   <g transform="translate(330,70)">
                     <circle r="18" fill="#450a0a" stroke="#ef4444" strokeWidth="2" />
                     <circle r="6" fill="#ef4444" filter="url(#glow)" />
-                    <text y="-24" textAnchor="middle" fill="#fca5a5" fontSize="10" fontFamily="JetBrains Mono">
+                    <text y="-24" textAnchor="middle" fill="#fca5a5" fontSize="10" fontFamily="IBM Plex Mono">
                       BARRIER
                     </text>
-                    <text y="30" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="JetBrains Mono">
+                    <text y="30" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="IBM Plex Mono">
                       BARRIER-17 DECAY
                     </text>
                   </g>
@@ -428,10 +452,10 @@ export const LandingPage: React.FC = () => {
                   <g transform="translate(210,230)">
                     <circle r="22" fill="#022c22" stroke="#10b981" strokeWidth="2" />
                     <circle r="8" fill="#10b981" filter="url(#glow)" />
-                    <text y="36" textAnchor="middle" fill="#a7f3d0" fontSize="10" fontFamily="JetBrains Mono">
+                    <text y="36" textAnchor="middle" fill="#a7f3d0" fontSize="10" fontFamily="IBM Plex Mono">
                       INTERVENTION
                     </text>
-                    <text y="48" textAnchor="middle" fill="#6ee7b7" fontSize="9" fontFamily="JetBrains Mono">
+                    <text y="48" textAnchor="middle" fill="#6ee7b7" fontSize="9" fontFamily="IBM Plex Mono">
                       HUMAN SIGN-OFF (SWA)
                     </text>
                   </g>
@@ -440,10 +464,10 @@ export const LandingPage: React.FC = () => {
                   <g transform="translate(110,200)">
                     <circle r="14" fill="#0f172a" stroke="#64748b" strokeWidth="1.5" />
                     <circle r="4" fill="#64748b" />
-                    <text y="-20" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="JetBrains Mono">
+                    <text y="-20" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="IBM Plex Mono">
                       FACILITY
                     </text>
-                    <text y="26" textAnchor="middle" fill="#64748b" fontSize="8" fontFamily="JetBrains Mono">
+                    <text y="26" textAnchor="middle" fill="#64748b" fontSize="8" fontFamily="IBM Plex Mono">
                       Permian TK-402
                     </text>
                   </g>
@@ -457,7 +481,7 @@ export const LandingPage: React.FC = () => {
                     fill="#fca5a5"
                     fontSize="9"
                     fontWeight="bold"
-                    fontFamily="JetBrains Mono"
+                    fontFamily="IBM Plex Mono"
                   >
                     87.4% POTENTIAL
                   </text>
@@ -726,7 +750,7 @@ export const LandingPage: React.FC = () => {
                   KNOWLEDGE GRAPH
                 </h3>
                 <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                  Connect hazards, barriers, assets, events, and safety outcomes. A relational ontology mapping 129 nodes and 384 edges to calculate degree centrality and cascading failure probability.
+                  Connect hazards, barriers, assets, events, and safety outcomes. A relational ontology mapping every tracked entity and its dependencies to calculate degree centrality and cascading failure probability.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-cyan-400">
@@ -823,16 +847,16 @@ export const LandingPage: React.FC = () => {
                 <line x1="80" y1="240" x2="960" y2="240" stroke="#1e293b" strokeDasharray="3 3" />
 
                 {/* Y Axis Labels */}
-                <text x="70" y="64" textAnchor="end" fill="#ef4444" fontSize="11" fontFamily="JetBrains Mono">
+                <text x="70" y="64" textAnchor="end" fill="#ef4444" fontSize="11" fontFamily="IBM Plex Mono">
                   CRITICAL (180)
                 </text>
-                <text x="70" y="124" textAnchor="end" fill="#f59e0b" fontSize="11" fontFamily="JetBrains Mono">
+                <text x="70" y="124" textAnchor="end" fill="#f59e0b" fontSize="11" fontFamily="IBM Plex Mono">
                   ELEVATED (120)
                 </text>
-                <text x="70" y="184" textAnchor="end" fill="#94a3b8" fontSize="11" fontFamily="JetBrains Mono">
+                <text x="70" y="184" textAnchor="end" fill="#94a3b8" fontSize="11" fontFamily="IBM Plex Mono">
                   NOMINAL (60)
                 </text>
-                <text x="70" y="244" textAnchor="end" fill="#64748b" fontSize="11" fontFamily="JetBrains Mono">
+                <text x="70" y="244" textAnchor="end" fill="#64748b" fontSize="11" fontFamily="IBM Plex Mono">
                   BASELINE (0)
                 </text>
 
@@ -847,7 +871,7 @@ export const LandingPage: React.FC = () => {
                   strokeDasharray="6 4"
                   opacity="0.6"
                 />
-                <text x="950" y="92" textAnchor="end" fill="#ef4444" fontSize="10" fontFamily="JetBrains Mono">
+                <text x="950" y="92" textAnchor="end" fill="#ef4444" fontSize="10" fontFamily="IBM Plex Mono">
                   EXECUTIVE RISK LIMIT (150 SIF UNITS)
                 </text>
 
@@ -906,33 +930,33 @@ export const LandingPage: React.FC = () => {
                     fill="#38bdf8"
                     fontSize="10"
                     fontWeight="bold"
-                    fontFamily="JetBrains Mono"
+                    fontFamily="IBM Plex Mono"
                   >
                     PREVENTIVE ACTION DEPLOYED
                   </text>
                 </g>
 
-                <text x="580" y="85" textAnchor="middle" fill="#fca5a5" fontSize="9" fontFamily="JetBrains Mono">
+                <text x="580" y="85" textAnchor="middle" fill="#fca5a5" fontSize="9" fontFamily="IBM Plex Mono">
                   SURGE: W06 (168 SIF)
                 </text>
 
                 {/* X Axis Weeks */}
-                <text x="140" y="275" textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="JetBrains Mono">
+                <text x="140" y="275" textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="IBM Plex Mono">
                   W01 Baseline
                 </text>
-                <text x="280" y="275" textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="JetBrains Mono">
+                <text x="280" y="275" textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="IBM Plex Mono">
                   W03 Drift
                 </text>
-                <text x="440" y="275" textAnchor="middle" fill="#f59e0b" fontSize="10" fontFamily="JetBrains Mono">
+                <text x="440" y="275" textAnchor="middle" fill="#f59e0b" fontSize="10" fontFamily="IBM Plex Mono">
                   W05 Precursor Acceleration
                 </text>
-                <text x="580" y="275" textAnchor="middle" fill="#ef4444" fontSize="10" fontFamily="JetBrains Mono">
+                <text x="580" y="275" textAnchor="middle" fill="#ef4444" fontSize="10" fontFamily="IBM Plex Mono">
                   W06 SWA Dispatch
                 </text>
-                <text x="730" y="275" textAnchor="middle" fill="#10b981" fontSize="10" fontFamily="JetBrains Mono">
+                <text x="730" y="275" textAnchor="middle" fill="#10b981" fontSize="10" fontFamily="IBM Plex Mono">
                   W09 Stabilization
                 </text>
-                <text x="890" y="275" textAnchor="middle" fill="#38bdf8" fontSize="10" fontFamily="JetBrains Mono">
+                <text x="890" y="275" textAnchor="middle" fill="#38bdf8" fontSize="10" fontFamily="IBM Plex Mono">
                   W12 Safe State
                 </text>
               </svg>
@@ -985,15 +1009,33 @@ export const LandingPage: React.FC = () => {
                 <div className="text-cyan-400 font-semibold mb-1">GRAPH TOPOLOGY TELEMETRY:</div>
                 <div className="flex justify-between text-slate-400">
                   <span>Active Entities:</span>
-                  <span className="text-white font-bold">129 Relational Nodes</span>
+                  <span className="text-white font-bold">
+                    {graphSummaryStatus === 'ready' && graphSummary
+                      ? `${graphSummary.nodeCount.toLocaleString()} Relational Nodes`
+                      : graphSummaryStatus === 'error'
+                      ? 'Unavailable'
+                      : 'Loading…'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-slate-400">
                   <span>Causal Dependencies:</span>
-                  <span className="text-white font-bold">384 Weighted Edges</span>
+                  <span className="text-white font-bold">
+                    {graphSummaryStatus === 'ready' && graphSummary
+                      ? `${graphSummary.edgeCount.toLocaleString()} Weighted Edges`
+                      : graphSummaryStatus === 'error'
+                      ? 'Unavailable'
+                      : 'Loading…'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-slate-400">
                   <span>Centrality Hub:</span>
-                  <span className="text-amber-400 font-bold">CSE TK-402 (0.89 Rank)</span>
+                  <span className="text-amber-400 font-bold">
+                    {graphSummaryStatus === 'loading'
+                      ? 'Loading…'
+                      : graphSummary?.centralityHub
+                      ? `${graphSummary.centralityHub.label} (${graphSummary.centralityHub.score.toFixed(2)} Rank)`
+                      : 'Unavailable'}
+                  </span>
                 </div>
               </div>
 
@@ -1013,7 +1055,13 @@ export const LandingPage: React.FC = () => {
               <div className="rounded-xl border border-slate-800 bg-[#0f131c] p-6 shadow-2xl relative overflow-hidden">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-mono text-slate-400">
                   <span>ONTOLOGY CANVASS // FORCE-DIRECTED (ILLUSTRATIVE SYNTHETIC TOPOLOGY)</span>
-                  <span className="text-cyan-400">SIF DENSITY COUPLING: 0.912 HIGH</span>
+                  <span className="text-cyan-400">
+                    {graphSummaryStatus === 'ready' && graphSummary && graphSummary.density !== null
+                      ? `GRAPH DENSITY: ${graphSummary.density.toFixed(3)} ${graphSummary.densityLabel}`
+                      : graphSummaryStatus === 'error'
+                      ? 'GRAPH DENSITY: UNAVAILABLE'
+                      : 'GRAPH DENSITY: LOADING…'}
+                  </span>
                 </div>
 
                 <div className="py-8 flex items-center justify-center">
@@ -1053,11 +1101,11 @@ export const LandingPage: React.FC = () => {
                         fill="#ffffff"
                         fontSize="11"
                         fontWeight="bold"
-                        fontFamily="JetBrains Mono"
+                        fontFamily="IBM Plex Mono"
                       >
                         CSE-402
                       </text>
-                      <text y="48" textAnchor="middle" fill="#38bdf8" fontSize="9" fontFamily="JetBrains Mono">
+                      <text y="48" textAnchor="middle" fill="#38bdf8" fontSize="9" fontFamily="IBM Plex Mono">
                         CSE Primary Hub
                       </text>
                     </g>
@@ -1065,10 +1113,10 @@ export const LandingPage: React.FC = () => {
                     {/* Node: Facility */}
                     <g transform="translate(160,100)">
                       <circle r="18" fill="#1e293b" stroke="#64748b" strokeWidth="2" />
-                      <text y="4" textAnchor="middle" fill="#e2e8f0" fontSize="9" fontFamily="JetBrains Mono">
+                      <text y="4" textAnchor="middle" fill="#e2e8f0" fontSize="9" fontFamily="IBM Plex Mono">
                         Site B
                       </text>
-                      <text y="-25" textAnchor="middle" fill="#94a3b8" fontSize="8" fontFamily="JetBrains Mono">
+                      <text y="-25" textAnchor="middle" fill="#94a3b8" fontSize="8" fontFamily="IBM Plex Mono">
                         FACILITY
                       </text>
                     </g>
@@ -1083,11 +1131,11 @@ export const LandingPage: React.FC = () => {
                         fill="#fca5a5"
                         fontSize="9"
                         fontWeight="bold"
-                        fontFamily="JetBrains Mono"
+                        fontFamily="IBM Plex Mono"
                       >
                         H2S Pocket
                       </text>
-                      <text y="-28" textAnchor="middle" fill="#ef4444" fontSize="8" fontFamily="JetBrains Mono">
+                      <text y="-28" textAnchor="middle" fill="#ef4444" fontSize="8" fontFamily="IBM Plex Mono">
                         Toxic H2S Hazard
                       </text>
                     </g>
@@ -1096,10 +1144,10 @@ export const LandingPage: React.FC = () => {
                     <g transform="translate(420,240)">
                       <circle r="20" fill="#451a03" stroke="#f59e0b" strokeWidth="2" />
                       <circle r="5" fill="#f59e0b" />
-                      <text y="4" textAnchor="middle" fill="#fde68a" fontSize="9" fontFamily="JetBrains Mono">
+                      <text y="4" textAnchor="middle" fill="#fde68a" fontSize="9" fontFamily="IBM Plex Mono">
                         Sniff Bypass
                       </text>
-                      <text y="32" textAnchor="middle" fill="#f59e0b" fontSize="8" fontFamily="JetBrains Mono">
+                      <text y="32" textAnchor="middle" fill="#f59e0b" fontSize="8" fontFamily="IBM Plex Mono">
                         Sniff Omission
                       </text>
                     </g>
@@ -1107,10 +1155,10 @@ export const LandingPage: React.FC = () => {
                     {/* Node: Barrier Decayed */}
                     <g transform="translate(320,300)">
                       <circle r="18" fill="#1e293b" stroke="#ef4444" strokeWidth="2" />
-                      <text y="4" textAnchor="middle" fill="#f87171" fontSize="8" fontFamily="JetBrains Mono">
+                      <text y="4" textAnchor="middle" fill="#f87171" fontSize="8" fontFamily="IBM Plex Mono">
                         LOTO Defect
                       </text>
-                      <text y="28" textAnchor="middle" fill="#94a3b8" fontSize="8" fontFamily="JetBrains Mono">
+                      <text y="28" textAnchor="middle" fill="#94a3b8" fontSize="8" fontFamily="IBM Plex Mono">
                         LOTO Mechanical
                       </text>
                     </g>
@@ -1119,10 +1167,10 @@ export const LandingPage: React.FC = () => {
                     <g transform="translate(140,250)">
                       <circle r="20" fill="#064e3b" stroke="#10b981" strokeWidth="2" />
                       <circle r="5" fill="#10b981" />
-                      <text y="4" textAnchor="middle" fill="#a7f3d0" fontSize="9" fontFamily="JetBrains Mono">
+                      <text y="4" textAnchor="middle" fill="#a7f3d0" fontSize="9" fontFamily="IBM Plex Mono">
                         SWA Halt
                       </text>
-                      <text y="32" textAnchor="middle" fill="#10b981" fontSize="8" fontFamily="JetBrains Mono">
+                      <text y="32" textAnchor="middle" fill="#10b981" fontSize="8" fontFamily="IBM Plex Mono">
                         Sentry Intervention
                       </text>
                     </g>

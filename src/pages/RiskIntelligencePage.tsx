@@ -25,6 +25,10 @@ export const RiskIntelligencePage: React.FC = () => {
   // Action status
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
+  // Facility table pagination
+  const FACILITY_PAGE_SIZE = 8;
+  const [tablePage, setTablePage] = useState(1);
+
   // Backend Risk Intelligence Data
   const [backendFacilities, setBackendFacilities] = useState<SiteAsset[]>([]);
   const [facilityList, setFacilityList] = useState<FacilityItem[]>([]);
@@ -122,6 +126,48 @@ export const RiskIntelligencePage: React.FC = () => {
     setTimeout(() => setActionFeedback(null), 2500);
   };
 
+  // Real CSV export of the currently filtered facility telemetry table
+  const handleExportFacilityCsv = () => {
+    if (filteredFacilities.length === 0) {
+      showFeedback('No facilities in the current filter to export.');
+      return;
+    }
+    const header = ['Site Name', 'Code', 'Region', 'Active Permits', 'Reports Analyzed', 'SIF Precursors', 'Precursor Density %', 'Composite Score', 'Risk Classification', '30D Trend'];
+    const rows = filteredFacilities.map((site) => {
+      const metrics = getScaledSiteMetrics(site);
+      return [site.name, site.code, site.region, String(metrics.scaledPermits), String(metrics.scaledReports), String(metrics.scaledPrecursors), String(metrics.scaledDensity), String(site.compositeScore), site.riskClassification, site.trend30d];
+    });
+    const csvContent = 'data:text/csv;charset=utf-8,' + [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', `facility_telemetry_${selectedSite}_${dateRange}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showFeedback(`Exported telemetry for ${filteredFacilities.length} facilities to CSV.`);
+  };
+
+  // Real audit dispatch: persists an Intervention record for this facility to PostgreSQL
+  const handleDispatchAudit = async (site: SiteAsset) => {
+    try {
+      await api.createIntervention({
+        title: `Scheduled Audit — ${site.name}`,
+        description: `Facility audit dispatched from Risk Intelligence console for ${site.name} (${site.code}). Composite risk score: ${site.compositeScore}/100.`,
+        targetFacility: site.name,
+        targetedVector: 'Audit',
+        priority: site.riskClassification === 'Critical' ? 'Critical' : site.riskClassification === 'High' ? 'High' : 'Medium',
+        status: 'Proposed',
+        owner: '',
+        ownerRole: null,
+        dueDate: null,
+        progressPct: 0
+      });
+      showFeedback(`Audit dispatched for ${site.name}. Persisted to Interventions register.`);
+    } catch (err: any) {
+      showFeedback(`Audit dispatch failed: ${err?.message || 'Unknown error'}`);
+    }
+  };
+
   const handleResetFilters = () => {
     setDateRange('90');
     setSelectedSite('all');
@@ -203,6 +249,17 @@ export const RiskIntelligencePage: React.FC = () => {
     return valid.reduce((sum, f) => sum + f.sifPrecursors, 0);
   }, [backendTotalEvents, filteredFacilities]);
 
+  // Reset to page 1 whenever the underlying filtered set changes so pagination never points past the end
+  useEffect(() => {
+    setTablePage(1);
+  }, [filteredFacilities.length, tableSearch, selectedSite, highCriticalOnly, selectedMatrixCell]);
+
+  const totalTablePages = Math.max(1, Math.ceil(filteredFacilities.length / FACILITY_PAGE_SIZE));
+  const pagedFacilities = useMemo(() => {
+    const start = (tablePage - 1) * FACILITY_PAGE_SIZE;
+    return filteredFacilities.slice(start, start + FACILITY_PAGE_SIZE);
+  }, [filteredFacilities, tablePage]);
+
   return (
     <div className="flex flex-col w-full gap-space-xl">
       {/* Toast */}
@@ -251,7 +308,10 @@ export const RiskIntelligencePage: React.FC = () => {
           {/* Action Cluster */}
           <div className="flex items-center gap-space-sm self-start lg:self-auto flex-wrap">
             <button
-              onClick={() => showFeedback(totalEventCount !== null ? `Filters applied to ${totalEventCount.toLocaleString()} operational records` : 'Filters applied to operational records')}
+              onClick={async () => {
+                await fetchRiskIntelligence();
+                showFeedback(totalEventCount !== null ? `Filters applied — ${totalEventCount.toLocaleString()} operational records loaded from PostgreSQL` : 'Filters applied — records refreshed from PostgreSQL');
+              }}
               className="px-space-md py-1.5 rounded bg-primary-container text-on-primary-container font-headline-sm text-headline-sm flex items-center gap-space-xs hover:bg-primary transition-colors shadow-sm font-semibold"
             >
               <span className="material-symbols-outlined text-[18px]">filter_alt</span>
@@ -631,7 +691,10 @@ export const RiskIntelligencePage: React.FC = () => {
           <div className="pt-space-md border-t border-outline-variant/30 flex items-center justify-between font-label-code-sm text-label-code-sm text-outline">
             <span>Aggregated across {filteredFacilities.length} facilities</span>
             <button
-              onClick={() => showFeedback('Triggered site-wide precursor benchmarking synchronization')}
+              onClick={async () => {
+                await fetchRiskIntelligence();
+                showFeedback('Ceilings recalculated from live PostgreSQL telemetry.');
+              }}
               className="text-primary hover:underline font-semibold"
             >
               Recalibrate Ceilings
@@ -822,7 +885,7 @@ export const RiskIntelligencePage: React.FC = () => {
               />
             </div>
             <button
-              onClick={() => showFeedback('Exported telemetry dataset to CSV')}
+              onClick={handleExportFacilityCsv}
               className="px-space-sm py-1.5 rounded bg-surface-container text-on-surface hover:bg-surface-bright font-label-code-sm text-label-code-sm flex items-center gap-1 border border-surface-container-high/40"
             >
               <span className="material-symbols-outlined text-[16px]">download</span> Export CSV
@@ -855,7 +918,7 @@ export const RiskIntelligencePage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredFacilities.map((site) => {
+                pagedFacilities.map((site) => {
                   const metrics = getScaledSiteMetrics(site);
                   return (
                     <tr key={site.id} className="hover:bg-surface-container/60 transition-colors">
@@ -944,7 +1007,7 @@ export const RiskIntelligencePage: React.FC = () => {
                             Drilldown
                           </button>
                           <button
-                            onClick={() => showFeedback(`Scheduled Audit dispatched for ${site.name}`)}
+                            onClick={() => handleDispatchAudit(site)}
                             className="px-2 py-1 rounded bg-surface-container text-on-surface hover:bg-surface-bright font-label-code-sm text-label-code-sm"
                           >
                             Audit
@@ -962,15 +1025,36 @@ export const RiskIntelligencePage: React.FC = () => {
         {/* Table Pagination & Counter */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-space-sm mt-space-md pt-space-md border-t border-outline-variant/30">
           <span className="font-label-code-sm text-label-code-sm text-outline">
-            Showing {filteredFacilities.length} of {backendFacilities.length} Active Facilities
+            Showing {pagedFacilities.length === 0 ? 0 : (tablePage - 1) * FACILITY_PAGE_SIZE + 1}–{(tablePage - 1) * FACILITY_PAGE_SIZE + pagedFacilities.length} of {filteredFacilities.length} Active Facilities
           </span>
           <div className="flex items-center gap-space-xs font-label-code-sm text-label-code-sm">
-            <button className="px-2.5 py-1 rounded bg-surface-container text-outline hover:text-on-surface disabled:opacity-40" disabled>
+            <button
+              onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+              disabled={tablePage <= 1}
+              className="px-2.5 py-1 rounded bg-surface-container text-outline hover:text-on-surface disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               Previous
             </button>
-            <span className="px-2 py-1 rounded bg-primary-container text-on-primary-container font-semibold">1</span>
-            <button className="px-2 py-1 rounded bg-surface-container text-outline hover:text-on-surface">2</button>
-            <button className="px-2.5 py-1 rounded bg-surface-container text-outline hover:text-on-surface">Next</button>
+            {Array.from({ length: totalTablePages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setTablePage(p)}
+                className={`px-2 py-1 rounded font-semibold ${
+                  p === tablePage
+                    ? 'bg-primary-container text-on-primary-container'
+                    : 'bg-surface-container text-outline hover:text-on-surface'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setTablePage((p) => Math.min(totalTablePages, p + 1))}
+              disabled={tablePage >= totalTablePages}
+              className="px-2.5 py-1 rounded bg-surface-container text-outline hover:text-on-surface disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>

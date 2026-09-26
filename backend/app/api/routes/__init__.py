@@ -1,4 +1,5 @@
 from .health import router as health_router
+from .public import router as public_router
 from .dashboard import router as dashboard_router
 from .report_analyzer import router as report_analyzer_router
 from .risk_intelligence import router as risk_intelligence_router
@@ -13,6 +14,7 @@ from .auth import router as auth_router
 
 __all__ = [
     "health_router",
+    "public_router",
     "dashboard_router",
     "report_analyzer_router",
     "risk_intelligence_router",

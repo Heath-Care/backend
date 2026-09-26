@@ -108,10 +108,29 @@ export interface BarrierSimulationResult {
   sifNewDecay?: string;
 }
 
+export interface PublicCentralityHub {
+  nodeId: string;
+  label: string;
+  score: number;
+}
+
+export interface PublicKnowledgeGraphSummary {
+  nodeCount: number;
+  edgeCount: number;
+  density: number | null;
+  densityLabel: 'LOW' | 'MODERATE' | 'HIGH' | null;
+  centralityHub: PublicCentralityHub | null;
+}
+
 export const api = {
   // 0. Health Connectivity Check
   async checkHealth(): Promise<BackendHealthResponse> {
     return httpClient.get<BackendHealthResponse>('/health');
+  },
+
+  // 0b. Public landing-page telemetry (unauthenticated, safe aggregate counts only)
+  async getPublicKnowledgeGraphSummary(): Promise<PublicKnowledgeGraphSummary> {
+    return httpClient.get<PublicKnowledgeGraphSummary>('/public/knowledge-graph/summary');
   },
 
   // 1. Dashboard

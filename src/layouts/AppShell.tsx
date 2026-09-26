@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api, API_BASE_URL } from '../services/api';
 import { useAuth } from '../auth/AuthProvider';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export const AppShell: React.FC = () => {
   const location = useLocation();
@@ -581,7 +582,9 @@ export const AppShell: React.FC = () => {
               </button>
             </div>
           )}
-          <Outlet />
+          <ErrorBoundary key={location.pathname} moduleName="Page">
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
