@@ -114,6 +114,93 @@ def generate_precursor_observations(
     return rows
 
 
+def generate_sif_precursor_velocity_series(
+    target_current: int, weeks: int = 16, executive_threshold: int = 150, seed_offset: int = 6
+) -> List[Dict[str, Any]]:
+    """
+    Returns a deterministic weekly SIF precursor volume time series ending exactly at
+    `target_current` (the live sum of Facility.sifPrecursors, i.e. the same number the
+    Dashboard's "Active SIF Precursors" tile reports), so the escalation chart's current
+    point and the headline metric never disagree.
+
+    The curve escalates from a low baseline with occasional pullbacks (representing
+    temporary barrier interventions), rather than a straight line or a single late spike,
+    while remaining fully deterministic (fixed RNG seed) and reproducible across deploys.
+    Every point this produces is written to PostgreSQL once via app/db/seed.py and read
+    back through the normal API route — nothing here is generated per-request or on the
+    frontend.
+    """
+    rnd = random.Random(SEED + seed_offset)
+    baseline = 1
+
+    # Build an unscaled escalation shape: mostly growing, with occasional dips.
+    raw: List[float] = []
+    val = float(baseline)
+    for _ in range(weeks):
+        growth = rnd.uniform(0.85, 0.97) if rnd.random() < 0.22 else rnd.uniform(1.08, 1.35)
+        val = max(float(baseline), val * growth)
+        raw.append(val)
+
+    # Rescale the shape so it lands exactly on target_current at the final week, preserving
+    # the relative ups/downs of the generated curve instead of just interpolating a straight line.
+    span = raw[-1] - baseline
+    scale = (target_current - baseline) / span if span > 1e-6 else 1.0
+
+    volumes: List[int] = []
+    for v in raw:
+        scaled = baseline + (v - baseline) * scale
+        volumes.append(max(1, int(round(scaled))))
+    volumes[0] = baseline
+    volumes[-1] = target_current  # exact agreement with the live facility-total metric
+
+    # Fixed week-of-year style labels (deterministic, not derived from datetime.now()).
+    end_week = 77
+    start_week = end_week - weeks + 1
+
+    series: List[Dict[str, Any]] = []
+    for i, vol in enumerate(volumes):
+        week_num = start_week + i
+        spikes = rnd.randint(1, 3) if rnd.random() < 0.3 else 0
+        series.append({
+            "week": f"Wk {week_num:02d}",
+            "precursorVolume": vol,
+            "baselineThreshold": executive_threshold,
+            "highEnergySpikes": spikes,
+        })
+    return series
+
+
+# Primary key of the single seed-owned WhatChangedSnapshot row (see app/db/seed.py).
+# Shared here so both the seeder and the synchronization check reference one constant.
+SEED_WHAT_CHANGED_SNAPSHOT_ID = "snap-current-7d"
+
+
+def is_velocity_series_stale(curve: Any, target_current: int, min_weeks: int = 16) -> bool:
+    """
+    Returns True if a persisted divergence_curve does NOT already match what
+    generate_sif_precursor_velocity_series() would produce for the given target —
+    i.e. it predates the 16-week generator (too few points, missing the
+    week/precursorVolume shape) or its final point has drifted from the live
+    Active SIF Precursors total (e.g. facility data changed since it was written).
+
+    Used to make WhatChangedSnapshot synchronization idempotent: a curve that is
+    already in sync is left completely untouched.
+    """
+    if not curve or not isinstance(curve, list):
+        return True
+    if len(curve) < min_weeks:
+        return True
+    if not all(
+        isinstance(pt, dict) and "week" in pt and "precursorVolume" in pt
+        for pt in curve
+    ):
+        return True
+    last_volume = curve[-1].get("precursorVolume")
+    if last_volume != target_current:
+        return True
+    return False
+
+
 def generate_risk_observations(
     facility_ids: List[str], facility_risk: Dict[str, str]
 ) -> List[Tuple[str, str, str, int, int, int]]:

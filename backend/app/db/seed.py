@@ -18,6 +18,14 @@ Startup behaviour of seed_database(force=False):
     schema authority. (SQLite test databases are created with metadata.create_all.)
   * Users are never seeded in production unless INITIAL_OPERATOR_EMAIL / INITIAL_OPERATOR_PASSWORD
     are provided; the local dev fixture user is created only when APP_ENV != production.
+  * EXCEPTION TO THE "ZERO ROWS" RULE, BY DESIGN: the single WhatChangedSnapshot row is a
+    system-managed telemetry cache, not user-authored data (no API route ever writes to it —
+    see _synchronize_seed_telemetry_snapshot() below for the full justification). On every
+    startup, after the normal per-table seeding above, this module re-checks that one row and
+    brings its divergence_curve back in sync with the current generate_sif_precursor_velocity_series()
+    output whenever it has drifted (e.g. a database seeded before that generator existed). This
+    keeps a Render deployment self-healing for that one cache across code updates without ever
+    touching Facility, Intervention, HumanReview, User, or any other operational table.
 """
 
 import sys
@@ -70,10 +78,90 @@ from app.data.seed_generator import (
     generate_additional_memory_records,
     generate_additional_interventions,
     generate_additional_reviews,
+    generate_sif_precursor_velocity_series,
+    is_velocity_series_stale,
+    SEED_WHAT_CHANGED_SNAPSHOT_ID,
 )
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("seed")
+
+
+def _synchronize_seed_telemetry_snapshot(db: Session) -> None:
+    """
+    Idempotently synchronizes the single seed-owned WhatChangedSnapshot row's
+    divergence_curve with the current generate_sif_precursor_velocity_series() output,
+    so the Dashboard's "SIF Precursor Escalation Dynamics" chart never serves a stale
+    curve left over from before that generator existed — without ever risking real
+    operational data.
+
+    Safety guarantees (all enforced below, not just asserted in a comment):
+      1. NEVER INSERTS OR DELETES: this function only ever performs an UPDATE of two
+         fields (divergence_curve, precursor_acceleration) on an EXISTING row. It cannot
+         create a duplicate snapshot and cannot remove one.
+      2. REFUSES TO ACT ON AMBIGUOUS STATE: if the table does not contain EXACTLY one
+         row, or that row's primary key is not the known seed constant
+         SEED_WHAT_CHANGED_SNAPSHOT_ID, it does nothing and logs a warning instead of
+         guessing. (Today there is exactly one code path that can ever create a
+         WhatChangedSnapshot row — step 10 above — and it always uses that fixed id, so
+         in practice this guard is always satisfied; it exists so this function fails
+         safe if that ever changes.)
+      3. TOUCHES NO OTHER TABLE: Facility rows are only read (to compute the live
+         Active SIF Precursors total), never written, by this function.
+      4. USES THE EXISTING GENERATOR, NOT A SECOND ALGORITHM: values come exclusively
+         from generate_sif_precursor_velocity_series(), the same deterministic function
+         seed_data.py already uses — no randomness beyond that function's own fixed seed,
+         no values invented here.
+      5. TRUE NO-OP WHEN ALREADY IN SYNC: is_velocity_series_stale() checks the
+         persisted curve's length, shape, and final value against the live facility
+         total; if it already matches, this function returns without writing anything.
+         Deploying/restarting repeatedly against an already-correct database therefore
+         performs zero writes on every run after the first.
+    """
+    rows = db.query(WhatChangedSnapshot).all()
+    if len(rows) == 0:
+        return  # Nothing to synchronize yet; step 10 above owns the initial insert.
+    if len(rows) > 1:
+        logger.warning(
+            "Found %d WhatChangedSnapshot rows (expected exactly 1). Skipping automatic "
+            "telemetry synchronization to avoid acting on an unexpected/ambiguous state.",
+            len(rows),
+        )
+        return
+
+    snapshot = rows[0]
+    if snapshot.id != SEED_WHAT_CHANGED_SNAPSHOT_ID:
+        logger.warning(
+            "WhatChangedSnapshot row has id %r, not the known seed-owned id %r. "
+            "Skipping automatic telemetry synchronization.",
+            snapshot.id, SEED_WHAT_CHANGED_SNAPSHOT_ID,
+        )
+        return
+
+    facilities = db.query(Facility).all()
+    if not facilities:
+        return  # No facilities yet to compute a live target from.
+    target_current = sum(f.sif_precursors or 0 for f in facilities)
+
+    if not is_velocity_series_stale(snapshot.divergence_curve, target_current):
+        return  # Already in sync: no write performed.
+
+    new_curve = generate_sif_precursor_velocity_series(
+        target_current=target_current, weeks=16, executive_threshold=150
+    )
+    first_val = new_curve[0]["precursorVolume"]
+    last_val = new_curve[-1]["precursorVolume"]
+    pct = round(((last_val - first_val) / max(1, first_val)) * 100.0, 1)
+
+    logger.info(
+        "Synchronizing seed-owned WhatChangedSnapshot telemetry: %d -> %d points, "
+        "final value -> %d (matches live Active SIF Precursors total).",
+        len(snapshot.divergence_curve or []), len(new_curve), last_val,
+    )
+    snapshot.divergence_curve = new_curve
+    snapshot.precursor_acceleration = f"{pct:+}%"
+    db.add(snapshot)
+    db.commit()
 
 
 def seed_database(force: bool = False, db: Optional[Session] = None):
@@ -400,7 +488,7 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
             logger.info("Seeding What Changed Snapshots...")
             wc = WHAT_CHANGED_DATA
             snap_obj = WhatChangedSnapshot(
-                id="snap-current-7d",
+                id=SEED_WHAT_CHANGED_SNAPSHOT_ID,
                 baseline_period=wc.get("baselinePeriod", "Last 30-60 Days Baseline"),
                 active_period=wc.get("activePeriod", "Trailing 7-Day Window"),
                 precursor_acceleration=wc.get("precursorVelocityDelta") or wc.get("precursorAcceleration", "N/A"),
@@ -417,6 +505,27 @@ def seed_database(force: bool = False, db: Optional[Session] = None):
             )
             db.merge(snap_obj)
             db.commit()
+
+        # 10.1 Seed Telemetry Synchronization (runs every startup, independent of `force`
+        # and independent of whether step 10 above just inserted a fresh row).
+        #
+        # WHY THIS RUNS UNCONDITIONALLY WHILE EVERY OTHER STEP ABOVE IS GUARDED BY
+        # `if force or count == 0`:
+        # Every other table above holds records real operators can create or modify through
+        # authenticated endpoints (Intervention, HumanReview, ...), so those are only ever
+        # seeded into an empty table and are otherwise left alone.
+        # WhatChangedSnapshot is different: it is a single system-managed telemetry cache with
+        # a fixed, seed-owned primary key (SEED_WHAT_CHANGED_SNAPSHOT_ID). No API route in this
+        # codebase ever creates, updates, or deletes a WhatChangedSnapshot row — every reference
+        # to it in app/api/routes/dashboard.py, app/api/routes/what_changed.py, and
+        # app/services/intervention_service.py is a read-only `db.query(WhatChangedSnapshot).first()`.
+        # It exists purely to hold the deterministic SIF velocity curve the Dashboard reads.
+        # Because a database created before the 16-week generate_sif_precursor_velocity_series()
+        # generator existed can still be carrying an old/short curve inserted by an earlier
+        # deploy (step 10 above only fires once, on an empty table), this step re-checks that
+        # single row on every startup and brings it back in sync with the current generator
+        # output whenever it has drifted — without ever touching any other table or column.
+        _synchronize_seed_telemetry_snapshot(db)
 
         # 11. Initial Verified Users (Controlled provisioning)
         if force or db.query(User).count() == 0:

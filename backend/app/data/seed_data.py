@@ -5,6 +5,8 @@ Maintains 100% schema alignment with the frontend datasets.
 
 from typing import List, Dict, Any
 
+from .seed_generator import generate_sif_precursor_velocity_series
+
 SITES_DATA: List[Dict[str, Any]] = [
     {
         "id": "site-b",
@@ -1566,6 +1568,17 @@ WHAT_CHANGED_DATA: Dict[str, Any] = {
         "peakLabel": "Velocity Divergence Spike (+34.2% Precursors)",
         "shiftDeltaPct": "+34.2%"
     },
+    # Deterministic weekly SIF precursor volume time series for the Dashboard's
+    # "SIF Precursor Escalation Dynamics" chart. Ends exactly on the live sum of every
+    # facility's sifPrecursors below (427 as currently seeded) so the chart's current point
+    # and the "Active SIF Precursors" tile never disagree. Persisted once into
+    # WhatChangedSnapshot.divergence_curve via app/db/seed.py and read back through
+    # GET /dashboard/telemetry - nothing here is generated per-request or on the frontend.
+    "velocitySeries": generate_sif_precursor_velocity_series(
+        target_current=sum(s["sifPrecursors"] for s in SITES_DATA),
+        weeks=16,
+        executive_threshold=150,
+    ),
     "flaggedPrecursors": [
         {
             "id": "chg-1",

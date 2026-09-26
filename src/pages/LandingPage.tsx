@@ -134,23 +134,23 @@ export const LandingPage: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand & Telemetry Status */}
-          <div className="flex items-center space-x-4">
-            <a href="#" className="flex items-center space-x-3 group">
-              <div className="w-9 h-9 rounded border border-cyan-500/40 bg-cyan-950/40 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-[0_0_12px_rgba(56,189,248,0.2)]">
-                <ShieldAlert className="w-5 h-5" />
+          <div className="flex items-center min-w-0 shrink-0 space-x-4">
+            <a href="#" className="flex items-center space-x-2.5 sm:space-x-3 group min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded border border-cyan-500/40 bg-cyan-950/40 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400 transition-colors shadow-[0_0_12px_rgba(56,189,248,0.2)]">
+                <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-mono font-bold tracking-wider text-base text-white">PRECURSOR-X</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800/90 text-cyan-400 border border-cyan-500/20">
+              <div className="min-w-0">
+                <div className="flex items-center space-x-2 whitespace-nowrap">
+                  <span className="font-mono font-bold tracking-wider text-sm sm:text-base text-white">PRECURSOR-X</span>
+                  <span className="hidden sm:inline-block text-[10px] font-mono font-semibold tracking-wide px-1.5 py-0.5 rounded bg-slate-800/90 text-cyan-400 border border-cyan-500/20">
                     v4.8
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 font-sans tracking-tight">Safety Intelligence Platform</p>
+                <p className="hidden sm:block text-[11px] text-slate-400 font-sans tracking-tight truncate">Safety Intelligence Platform</p>
               </div>
             </a>
 
-            <div className="hidden xl:flex items-center space-x-2 pl-4 border-l border-slate-800 text-xs font-mono text-slate-400">
+            <div className="hidden xl:flex items-center space-x-2 pl-4 border-l border-slate-800 text-xs font-mono font-semibold tracking-wide text-slate-400 whitespace-nowrap">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></span>
               <span className="text-slate-300">SYSTEM ONLINE</span>
               <span className="text-slate-600">//</span>
@@ -159,7 +159,7 @@ export const LandingPage: React.FC = () => {
           </div>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-300">
+          <nav className="hidden lg:flex items-center space-x-5 xl:space-x-8 text-sm font-medium text-slate-300 whitespace-nowrap">
             <a href="#platform" className="hover:text-cyan-400 transition-colors">
               Platform
             </a>
@@ -178,16 +178,16 @@ export const LandingPage: React.FC = () => {
           </nav>
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-2.5">
+          <div className="flex items-center shrink-0 space-x-2 sm:space-x-2.5">
             <button
               onClick={openRegisterModal}
-              className="hidden sm:inline-flex items-center px-3.5 py-1.5 text-xs font-mono font-medium rounded border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white transition-all bg-slate-900/50 cursor-pointer"
+              className="hidden sm:inline-flex items-center whitespace-nowrap px-3 lg:px-3.5 py-1.5 text-xs font-mono font-medium rounded border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white transition-all bg-slate-900/50 cursor-pointer"
             >
               REQUEST ACCESS
             </button>
             <button
               onClick={handleEnterPlatform}
-              className="hidden sm:inline-flex items-center space-x-1.5 px-4 py-1.5 text-xs font-mono font-semibold rounded bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-[0_0_15px_rgba(56,189,248,0.35)] hover:shadow-[0_0_20px_rgba(56,189,248,0.5)] cursor-pointer"
+              className="hidden sm:inline-flex items-center whitespace-nowrap space-x-1.5 px-3.5 lg:px-4 py-1.5 text-xs font-mono font-semibold rounded bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-[0_0_15px_rgba(56,189,248,0.35)] hover:shadow-[0_0_20px_rgba(56,189,248,0.5)] cursor-pointer"
             >
               <Lock className="w-3.5 h-3.5" />
               <span>{isAuthenticated ? 'CONSOLE' : 'LOGIN'}</span>
@@ -197,7 +197,7 @@ export const LandingPage: React.FC = () => {
             <button
               id="mobile-toggle"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`md:hidden flex items-center justify-center w-9 h-9 rounded-lg border transition-all cursor-pointer shadow-sm ${
+              className={`lg:hidden flex items-center justify-center w-9 h-9 shrink-0 rounded-lg border transition-all cursor-pointer shadow-sm ${
                 mobileMenuOpen
                   ? 'border-cyan-500/60 bg-cyan-950/60 text-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.25)]'
                   : 'border-slate-700/80 bg-slate-900/80 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-400'
@@ -213,14 +213,14 @@ export const LandingPage: React.FC = () => {
         {mobileMenuOpen && (
           <div
             id="mobile-menu"
-            className="md:hidden border-b border-cyan-500/30 bg-[#090d16]/98 backdrop-blur-2xl shadow-2xl transition-all duration-300 overflow-hidden"
+            className="lg:hidden border-b border-cyan-500/30 bg-[#090d16]/98 backdrop-blur-2xl shadow-2xl transition-all duration-300 overflow-hidden"
           >
             {/* Top accent glowing separator */}
             <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
 
             <div className="px-4 py-4 space-y-4">
               {/* Telemetry status badge */}
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-800 text-[11px] font-mono text-slate-400">
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-800 text-[11px] font-mono font-semibold tracking-wide text-slate-400">
                 <div className="flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
                   <span className="text-slate-200 font-semibold">PRECURSOR-X OS</span>
@@ -253,7 +253,7 @@ export const LandingPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-1.5 text-slate-500 group-hover:text-cyan-400 transition-colors font-mono text-[10px] shrink-0">
+                    <div className="flex items-center space-x-1.5 text-slate-500 group-hover:text-cyan-400 transition-colors font-mono font-bold tracking-wide text-[10px] shrink-0">
                       <span>{item.tag}</span>
                       <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
@@ -280,7 +280,7 @@ export const LandingPage: React.FC = () => {
                     setMobileMenuOpen(false);
                     openRegisterModal();
                   }}
-                  className="w-full py-2 px-4 rounded-lg border border-slate-700/80 hover:border-slate-500 bg-slate-900/60 text-slate-300 hover:text-white font-mono text-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                  className="w-full py-2 px-4 rounded-lg border border-slate-700/80 hover:border-slate-500 bg-slate-900/60 text-slate-300 hover:text-white font-mono font-semibold tracking-wide text-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5 text-cyan-400" />
                   <span>REQUEST ACCESS</span>
@@ -288,7 +288,7 @@ export const LandingPage: React.FC = () => {
               </div>
 
               {/* Micro Disclaimer */}
-              <div className="pt-1 text-center text-[10px] font-mono text-slate-500 tracking-wider">
+              <div className="pt-1 text-center text-[10px] font-mono font-semibold text-slate-500 tracking-wider">
                 DEMO ENVIRONMENT • SYNTHETIC DATA • CCPS PSM
               </div>
             </div>
@@ -301,12 +301,12 @@ export const LandingPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           {/* Headline & Value Prop */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs font-mono">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-semibold tracking-wide">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
               <span>DEMO ENVIRONMENT • SYNTHETIC SAFETY TELEMETRY // IOGP 459 & ISO-45001</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
+            <h1 className="font-headline text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
               SEE THE <span className="text-gradient-highlight">PRECURSOR.</span>
               <br />
               BEFORE IT BECOMES
@@ -329,7 +329,7 @@ export const LandingPage: React.FC = () => {
               </button>
               <a
                 href="#how-it-works"
-                className="inline-flex justify-center items-center space-x-2 px-6 py-3 rounded border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-mono text-sm transition-all bg-slate-900/40"
+                className="inline-flex justify-center items-center space-x-2 px-6 py-3 rounded border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-mono font-semibold tracking-wide text-sm transition-all bg-slate-900/40"
               >
                 <span>EXPLORE PLATFORM</span>
                 <ChevronDown className="w-4 h-4" />
@@ -338,7 +338,7 @@ export const LandingPage: React.FC = () => {
 
             {/* Telemetry Status Strip */}
             <div className="pt-6 border-t border-slate-800/80">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] font-mono text-slate-400">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] font-mono font-semibold tracking-wide text-slate-400">
                 <div className="flex items-center space-x-1.5">
                   <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
                   <span>AI ENGINE READY</span>
@@ -356,7 +356,7 @@ export const LandingPage: React.FC = () => {
                   <span>HUMAN REVIEW ON</span>
                 </div>
               </div>
-              <div className="pt-2 text-[10px] font-mono text-slate-500 tracking-wider">
+              <div className="pt-2 text-[10px] font-mono font-semibold text-slate-500 tracking-wider">
                 ENV: PRODUCTION MIRROR <span className="mx-2">•</span>{' '}
                 <span className="text-cyan-500/80">DEMO ENVIRONMENT • SYNTHETIC DATA</span>
               </div>
@@ -366,7 +366,7 @@ export const LandingPage: React.FC = () => {
           {/* Hero Telemetry Visualization */}
           <div className="lg:col-span-5 relative">
             <div className="rounded-xl border border-slate-800/90 bg-[#0f131c]/90 backdrop-blur-md p-5 shadow-2xl relative overflow-hidden">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 text-xs font-mono">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 text-xs font-mono font-semibold tracking-wide">
                 <div className="flex items-center space-x-2 text-slate-300">
                   <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
                   <span className="font-semibold text-white">LIVE SIF PRECURSOR GRAPH</span>
@@ -409,10 +409,10 @@ export const LandingPage: React.FC = () => {
                   <g transform="translate(80,60)">
                     <circle r="18" fill="#0f172a" stroke="#38bdf8" strokeWidth="2" />
                     <circle r="6" fill="#38bdf8" filter="url(#glow)" />
-                    <text y="-25" textAnchor="middle" fill="#94a3b8" fontSize="10" fontFamily="IBM Plex Mono">
+                    <text y="-25" textAnchor="middle" fill="#94a3b8" fontSize="10" fontWeight="600" letterSpacing="0.05em" fontFamily="IBM Plex Mono">
                       EVENT
                     </text>
-                    <text y="30" textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="IBM Plex Mono">
+                    <text y="30" textAnchor="middle" fill="#64748b" fontSize="9" fontWeight="600" fontFamily="IBM Plex Mono">
                       #NM-0941
                     </text>
                   </g>
@@ -427,11 +427,12 @@ export const LandingPage: React.FC = () => {
                       fill="#fde68a"
                       fontWeight="bold"
                       fontSize="11"
+                      letterSpacing="0.04em"
                       fontFamily="IBM Plex Mono"
                     >
                       PRECURSOR
                     </text>
-                    <text y="42" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="IBM Plex Mono">
+                    <text y="42" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="600" fontFamily="IBM Plex Mono">
                       PREC-219 [TK-402 H2S]
                     </text>
                   </g>
@@ -440,10 +441,10 @@ export const LandingPage: React.FC = () => {
                   <g transform="translate(330,70)">
                     <circle r="18" fill="#450a0a" stroke="#ef4444" strokeWidth="2" />
                     <circle r="6" fill="#ef4444" filter="url(#glow)" />
-                    <text y="-24" textAnchor="middle" fill="#fca5a5" fontSize="10" fontFamily="IBM Plex Mono">
+                    <text y="-24" textAnchor="middle" fill="#fca5a5" fontSize="10" fontWeight="600" letterSpacing="0.05em" fontFamily="IBM Plex Mono">
                       BARRIER
                     </text>
-                    <text y="30" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="IBM Plex Mono">
+                    <text y="30" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="600" fontFamily="IBM Plex Mono">
                       BARRIER-17 DECAY
                     </text>
                   </g>
@@ -452,10 +453,10 @@ export const LandingPage: React.FC = () => {
                   <g transform="translate(210,230)">
                     <circle r="22" fill="#022c22" stroke="#10b981" strokeWidth="2" />
                     <circle r="8" fill="#10b981" filter="url(#glow)" />
-                    <text y="36" textAnchor="middle" fill="#a7f3d0" fontSize="10" fontFamily="IBM Plex Mono">
+                    <text y="36" textAnchor="middle" fill="#a7f3d0" fontSize="10" fontWeight="600" letterSpacing="0.05em" fontFamily="IBM Plex Mono">
                       INTERVENTION
                     </text>
-                    <text y="48" textAnchor="middle" fill="#6ee7b7" fontSize="9" fontFamily="IBM Plex Mono">
+                    <text y="48" textAnchor="middle" fill="#6ee7b7" fontSize="9" fontWeight="600" fontFamily="IBM Plex Mono">
                       HUMAN SIGN-OFF (SWA)
                     </text>
                   </g>
@@ -464,10 +465,10 @@ export const LandingPage: React.FC = () => {
                   <g transform="translate(110,200)">
                     <circle r="14" fill="#0f172a" stroke="#64748b" strokeWidth="1.5" />
                     <circle r="4" fill="#64748b" />
-                    <text y="-20" textAnchor="middle" fill="#94a3b8" fontSize="9" fontFamily="IBM Plex Mono">
+                    <text y="-20" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="600" letterSpacing="0.05em" fontFamily="IBM Plex Mono">
                       FACILITY
                     </text>
-                    <text y="26" textAnchor="middle" fill="#64748b" fontSize="8" fontFamily="IBM Plex Mono">
+                    <text y="26" textAnchor="middle" fill="#64748b" fontSize="8" fontWeight="600" fontFamily="IBM Plex Mono">
                       Permian TK-402
                     </text>
                   </g>
@@ -489,7 +490,7 @@ export const LandingPage: React.FC = () => {
               </div>
 
               {/* Micro Telemetry Footer */}
-              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
+              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono font-semibold tracking-wide text-slate-400">
                 <span>
                   VEC-HASH: <span className="text-cyan-400">#8f01b-c12</span>
                 </span>
@@ -504,29 +505,29 @@ export const LandingPage: React.FC = () => {
         {/* Trust / System Metrics Strip */}
         <div className="mt-20 pt-10 border-t border-slate-800/90">
           <div className="text-center pb-6">
-            <span className="text-[10px] font-mono tracking-widest text-slate-500 uppercase">
+            <span className="text-[10px] font-mono font-bold tracking-widest text-slate-500 uppercase">
               [ Synthetic Demonstration Data • Continuous Ingest Protocol Active ]
             </span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div className="p-6 rounded-lg bg-slate-900/40 border border-slate-800">
               <div className="text-3xl lg:text-4xl font-mono font-bold text-white">14</div>
-              <div className="text-xs font-mono text-cyan-400 tracking-wider mt-1">FACILITIES MONITORED</div>
+              <div className="text-xs font-mono font-bold tracking-wider mt-1 text-cyan-400">FACILITIES MONITORED</div>
               <p className="text-[11px] text-slate-500 mt-1">Offshore Spars, Refineries & Inland Hubs</p>
             </div>
             <div className="p-6 rounded-lg bg-slate-900/40 border border-slate-800">
               <div className="text-3xl lg:text-4xl font-mono font-bold text-cyan-400">1,284</div>
-              <div className="text-xs font-mono text-slate-300 tracking-wider mt-1">SAFETY EVENTS ANALYZED</div>
+              <div className="text-xs font-mono font-bold tracking-wider mt-1 text-slate-300">SAFETY EVENTS ANALYZED</div>
               <p className="text-[11px] text-slate-500 mt-1">Near-miss logs, PTW shifts & sensor feeds</p>
             </div>
             <div className="p-6 rounded-lg bg-slate-900/40 border border-slate-800">
               <div className="text-3xl lg:text-4xl font-mono font-bold text-amber-400">327</div>
-              <div className="text-xs font-mono text-slate-300 tracking-wider mt-1">PRECURSOR PATTERNS</div>
+              <div className="text-xs font-mono font-bold tracking-wider mt-1 text-slate-300">PRECURSOR PATTERNS</div>
               <p className="text-[11px] text-slate-500 mt-1">Classified across 9 Life-Saving Rules</p>
             </div>
             <div className="p-6 rounded-lg bg-slate-900/40 border border-slate-800">
               <div className="text-3xl lg:text-4xl font-mono font-bold text-emerald-400">96.4%</div>
-              <div className="text-xs font-mono text-slate-300 tracking-wider mt-1">BARRIER COVERAGE</div>
+              <div className="text-xs font-mono font-bold tracking-wider mt-1 text-slate-300">BARRIER COVERAGE</div>
               <p className="text-[11px] text-slate-500 mt-1">Dynamic Bowtie & SWA intervention rate</p>
             </div>
           </div>
@@ -537,10 +538,10 @@ export const LandingPage: React.FC = () => {
       <section id="how-it-works" className="py-24 relative z-10 border-t border-slate-800/80 bg-[#090d16]/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-            <span className="text-xs font-mono px-3 py-1 rounded bg-slate-800/80 text-cyan-400 border border-slate-700">
+            <span className="text-xs font-mono font-bold tracking-wide px-3 py-1 rounded bg-slate-800/80 text-cyan-400 border border-slate-700">
               OPERATIONAL PROCESS
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+            <h2 className="font-headline text-3xl sm:text-4xl font-bold tracking-tight text-white">
               FROM EVENT DATA
               <br />
               TO PREVENTIVE ACTION.
@@ -557,7 +558,7 @@ export const LandingPage: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-2xl font-mono font-extrabold text-cyan-400">01</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">INGEST</span>
+                  <span className="text-[10px] font-mono font-bold tracking-wide px-2 py-0.5 rounded bg-slate-800 text-slate-400">INGEST</span>
                 </div>
                 <h3 className="text-base font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
                   OBSERVE
@@ -566,7 +567,7 @@ export const LandingPage: React.FC = () => {
                   Collect incident reports, near-miss descriptions, PTW handovers, and sniffer telemetry across all active shifts.
                 </p>
               </div>
-              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono text-slate-500">
+              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono font-semibold text-slate-500">
                 SOURCE: FIELD NLP & SENSORS
               </div>
             </div>
@@ -576,7 +577,7 @@ export const LandingPage: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-2xl font-mono font-extrabold text-cyan-400">02</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                  <span className="text-[10px] font-mono font-bold tracking-wide px-2 py-0.5 rounded bg-slate-800 text-slate-400">
                     DECOMPOSE
                   </span>
                 </div>
@@ -587,7 +588,7 @@ export const LandingPage: React.FC = () => {
                   Identify hazards, latent precursors, barrier states, and Life-Saving Rule breaches with causal token attribution.
                 </p>
               </div>
-              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono text-slate-500">
+              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono font-semibold text-slate-500">
                 NLP TOKEN ATTRIBUTION
               </div>
             </div>
@@ -597,7 +598,7 @@ export const LandingPage: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-2xl font-mono font-extrabold text-cyan-400">03</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">RELATE</span>
+                  <span className="text-[10px] font-mono font-bold tracking-wide px-2 py-0.5 rounded bg-slate-800 text-slate-400">RELATE</span>
                 </div>
                 <h3 className="text-base font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
                   CONNECT
@@ -606,7 +607,7 @@ export const LandingPage: React.FC = () => {
                   Link events, hardware assets, contractor shifts, and barrier states through the Relational Safety Knowledge Graph.
                 </p>
               </div>
-              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono text-slate-500">
+              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono font-semibold text-slate-500">
                 GRAPH ONTOLOGY ENGINE
               </div>
             </div>
@@ -616,7 +617,7 @@ export const LandingPage: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-2xl font-mono font-extrabold text-amber-400">04</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/30">
+                  <span className="text-[10px] font-mono font-bold tracking-wide px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/30">
                     ANALYTICS
                   </span>
                 </div>
@@ -627,7 +628,7 @@ export const LandingPage: React.FC = () => {
                   Detect velocity shifts, recurring pattern genomes, turnaround surge vulnerabilities, and SIF escalation vectors.
                 </p>
               </div>
-              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono text-amber-400/80">
+              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono font-semibold text-amber-400/80">
                 BAYESIAN SIF MODELING
               </div>
             </div>
@@ -637,7 +638,7 @@ export const LandingPage: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-2xl font-mono font-extrabold text-emerald-400">05</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold tracking-wide px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
                     DISPATCH
                   </span>
                 </div>
@@ -648,7 +649,7 @@ export const LandingPage: React.FC = () => {
                   Route actionable findings to immediate SWA stand-downs, automated sentry audits, CAPA triggers, and specialist sign-off.
                 </p>
               </div>
-              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono text-emerald-400/80">
+              <div className="mt-6 pt-3 border-t border-slate-800/80 text-[10px] font-mono font-semibold text-emerald-400/80">
                 HUMAN SIGN-OFF & DISPATCH
               </div>
             </div>
@@ -661,8 +662,8 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16">
             <div>
-              <span className="text-xs font-mono text-cyan-400 uppercase tracking-widest">Enterprise Modules</span>
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mt-1">
+              <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">Enterprise Modules</span>
+              <h2 className="font-headline text-3xl sm:text-4xl font-bold tracking-tight text-white mt-1">
                 ONE SAFETY INTELLIGENCE LAYER.
               </h2>
             </div>
@@ -689,7 +690,7 @@ export const LandingPage: React.FC = () => {
                   NLP-driven incident and near-miss analysis. Ingests raw shift descriptions, isolates SIF precursors, and calculates Bayesian fatality likelihood with token-level causal attribution.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-cyan-400">
+              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono font-semibold tracking-wide text-cyan-400">
                 <span className="text-[11px] text-slate-500">MODULE // R1-NLP</span>
                 <span className="group-hover:translate-x-1 transition-transform flex items-center">EXPLORE &rarr;</span>
               </div>
@@ -709,7 +710,7 @@ export const LandingPage: React.FC = () => {
                   Discover recurring precursor patterns and causal chains. Clusters unstructured field reports into systemic genomic triads, identifying hidden behavioral variances before barrier collapse.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-cyan-400">
+              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono font-semibold tracking-wide text-cyan-400">
                 <span className="text-[11px] text-slate-500">MODULE // DNA-GEN</span>
                 <span className="group-hover:translate-x-1 transition-transform flex items-center">EXPLORE &rarr;</span>
               </div>
@@ -731,7 +732,7 @@ export const LandingPage: React.FC = () => {
                   Search institutional safety knowledge and historical precedents. High-dimensional vector retrieval matches active field situations against historical near-misses and proven CAPA remedies.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-cyan-400">
+              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono font-semibold tracking-wide text-cyan-400">
                 <span className="text-[11px] text-slate-500">MODULE // VEC-CORPUS</span>
                 <span className="group-hover:translate-x-1 transition-transform flex items-center">EXPLORE &rarr;</span>
               </div>
@@ -753,7 +754,7 @@ export const LandingPage: React.FC = () => {
                   Connect hazards, barriers, assets, events, and safety outcomes. A relational ontology mapping every tracked entity and its dependencies to calculate degree centrality and cascading failure probability.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-cyan-400">
+              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono font-semibold tracking-wide text-cyan-400">
                 <span className="text-[11px] text-slate-500">MODULE // ONTOLOGY-V4</span>
                 <span className="group-hover:translate-x-1 transition-transform flex items-center">EXPLORE &rarr;</span>
               </div>
@@ -775,7 +776,7 @@ export const LandingPage: React.FC = () => {
                   Monitor risk density, facility exposure, and precursor velocity. Interactive 5×5 consequence severity matrix isolating site-specific barrier health against global industry benchmarks.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-cyan-400">
+              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono font-semibold tracking-wide text-cyan-400">
                 <span className="text-[11px] text-slate-500">MODULE // MATRIX-5X5</span>
                 <span className="group-hover:translate-x-1 transition-transform flex items-center">EXPLORE &rarr;</span>
               </div>
@@ -797,7 +798,7 @@ export const LandingPage: React.FC = () => {
                   Convert intelligence into preventive action and CAPA workflows. Dispatch targeted sentry audits, trigger Stop Work Authority protocols, and track post-intervention barrier recovery.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-cyan-400">
+              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono font-semibold tracking-wide text-cyan-400">
                 <span className="text-[11px] text-slate-500">MODULE // CAPA-DISPATCH</span>
                 <span className="group-hover:translate-x-1 transition-transform flex items-center">EXPLORE &rarr;</span>
               </div>
@@ -810,10 +811,10 @@ export const LandingPage: React.FC = () => {
       <section id="risk-telemetry" className="py-24 relative z-10 border-t border-slate-800/80 bg-[#0c101a]/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
-            <span className="text-xs font-mono px-3 py-1 rounded bg-slate-800 text-cyan-400 border border-slate-700">
+            <span className="text-xs font-mono font-bold tracking-wide px-3 py-1 rounded bg-slate-800 text-cyan-400 border border-slate-700">
               TEMPORAL SIF DYNAMICS
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+            <h2 className="font-headline text-3xl sm:text-4xl font-bold tracking-tight text-white">
               UNDERSTAND HOW RISK CHANGES.
             </h2>
             <p className="text-sm text-slate-400 font-normal">
@@ -823,7 +824,7 @@ export const LandingPage: React.FC = () => {
 
           {/* High-Fidelity Technical Telemetry Chart */}
           <div className="p-6 rounded-xl border border-slate-800 bg-[#0f131c] shadow-2xl relative">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-800 text-xs font-mono text-slate-400">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-800 text-xs font-mono font-semibold tracking-wide text-slate-400">
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
                 <span className="text-white font-semibold">RUN CHART: SIF DENSITY vs BARRIER DECAY</span>
@@ -963,7 +964,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             {/* Legend / Metric Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-slate-800 text-xs font-mono">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-slate-800 text-xs font-mono font-semibold">
               <div className="p-3 rounded bg-slate-900/60 border border-slate-800">
                 <span className="text-slate-400 block mb-1">STAGE 1:</span>
                 <div className="text-white font-semibold">Precursor Drift (+34.2%)</div>
@@ -995,8 +996,8 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs font-mono text-cyan-400 uppercase tracking-widest">Safety Ontology</span>
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight">
+              <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">Safety Ontology</span>
+              <h2 className="font-headline text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight">
                 CONNECTING EVIDENCE
                 <br />
                 INTO A RELATIONAL MODEL.
@@ -1042,7 +1043,7 @@ export const LandingPage: React.FC = () => {
               <div className="pt-2">
                 <a
                   href="#human-governance"
-                  className="inline-flex items-center space-x-2 text-cyan-400 hover:text-cyan-300 font-mono text-xs tracking-wider"
+                  className="inline-flex items-center space-x-2 text-cyan-400 hover:text-cyan-300 font-mono font-bold text-xs tracking-wider"
                 >
                   <span>EXPLORE THE SAFETY ONTOLOGY ENGINE</span>
                   <ArrowRight className="w-4 h-4" />
@@ -1053,7 +1054,7 @@ export const LandingPage: React.FC = () => {
             {/* Graph Visual Representation */}
             <div className="lg:col-span-7">
               <div className="rounded-xl border border-slate-800 bg-[#0f131c] p-6 shadow-2xl relative overflow-hidden">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-mono text-slate-400">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-mono font-semibold tracking-wide text-slate-400">
                   <span>ONTOLOGY CANVASS // FORCE-DIRECTED (ILLUSTRATIVE SYNTHETIC TOPOLOGY)</span>
                   <span className="text-cyan-400">
                     {graphSummaryStatus === 'ready' && graphSummary && graphSummary.density !== null
@@ -1177,7 +1178,7 @@ export const LandingPage: React.FC = () => {
                   </svg>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono font-semibold tracking-wide text-slate-400">
                   <div className="flex items-center space-x-4">
                     <span className="flex items-center">
                       <span className="w-2 h-2 rounded-full bg-cyan-400 mr-1.5"></span>Hub / Precursor
@@ -1201,10 +1202,10 @@ export const LandingPage: React.FC = () => {
       <section id="human-governance" className="py-24 relative z-10 border-t border-slate-800/80 bg-[#090d16]/90">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-            <span className="text-xs font-mono px-3 py-1 rounded bg-slate-800 text-cyan-400 border border-slate-700">
+            <span className="text-xs font-mono font-bold tracking-wide px-3 py-1 rounded bg-slate-800 text-cyan-400 border border-slate-700">
               REGULATORY RIGOR & ETHICS
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+            <h2 className="font-headline text-3xl sm:text-4xl font-bold tracking-tight text-white">
               INTELLIGENCE WITH
               <br />
               HUMAN OVERSIGHT.
@@ -1217,27 +1218,27 @@ export const LandingPage: React.FC = () => {
           {/* Human Verification Workflow Stages */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12">
             <div className="p-4 rounded-lg bg-slate-900/60 border border-slate-800 text-center">
-              <div className="text-xs font-mono text-cyan-400 mb-1">01. INGEST</div>
+              <div className="text-xs font-mono font-bold tracking-wide text-cyan-400 mb-1">01. INGEST</div>
               <div className="font-bold text-white text-sm">AI DETECTION</div>
               <p className="text-[11px] text-slate-400 mt-2">NLP Token flagging & Bayesian score</p>
             </div>
             <div className="p-4 rounded-lg bg-slate-900/60 border border-slate-800 text-center">
-              <div className="text-xs font-mono text-cyan-400 mb-1">02. REVIEW</div>
+              <div className="text-xs font-mono font-bold tracking-wide text-cyan-400 mb-1">02. REVIEW</div>
               <div className="font-bold text-white text-sm">SPECIALIST AUDIT</div>
               <p className="text-[11px] text-slate-400 mt-2">HSE Officer inspects token weights</p>
             </div>
             <div className="p-4 rounded-lg bg-slate-900/60 border border-slate-800 text-center">
-              <div className="text-xs font-mono text-cyan-400 mb-1">03. TUNE</div>
+              <div className="text-xs font-mono font-bold tracking-wide text-cyan-400 mb-1">03. TUNE</div>
               <div className="font-bold text-white text-sm">CALIBRATION</div>
               <p className="text-[11px] text-slate-400 mt-2">Human override & rule mapping</p>
             </div>
             <div className="p-4 rounded-lg bg-slate-900/60 border border-slate-800 text-center">
-              <div className="text-xs font-mono text-cyan-400 mb-1">04. RECORD</div>
+              <div className="text-xs font-mono font-bold tracking-wide text-cyan-400 mb-1">04. RECORD</div>
               <div className="font-bold text-white text-sm">CERTIFICATION</div>
               <p className="text-[11px] text-slate-400 mt-2">SHA-256 cryptographic sign-off</p>
             </div>
             <div className="p-4 rounded-lg bg-emerald-950/30 border border-emerald-800/50 text-center">
-              <div className="text-xs font-mono text-emerald-400 mb-1">05. SECURE</div>
+              <div className="text-xs font-mono font-bold tracking-wide text-emerald-400 mb-1">05. SECURE</div>
               <div className="font-bold text-white text-sm">PREVENTIVE ACTION</div>
               <p className="text-[11px] text-slate-300 mt-2">Site-wide barrier mandate executed</p>
             </div>
@@ -1288,7 +1289,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs font-mono">
+            <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs font-mono font-semibold tracking-wide">
               <span className="text-slate-500 mb-2 sm:mb-0">GOVERNANCE PROTOCOL P-77 COMPLIANT</span>
               <button
                 onClick={handleEnterPlatform}
@@ -1304,12 +1305,12 @@ export const LandingPage: React.FC = () => {
       {/* Section 12: Final CTA */}
       <section className="py-24 relative z-10 border-t border-slate-800/80 bg-gradient-to-b from-[#090d16] to-[#04060a]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs font-mono">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-semibold tracking-wide">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
             <span>NEXT-GENERATION INDUSTRIAL SAFETY OS</span>
           </div>
 
-          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+          <h2 className="font-headline text-4xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
             TURN SAFETY SIGNALS
             <br />
             <span className="text-gradient-highlight">INTO PREVENTIVE ACTION.</span>
@@ -1329,13 +1330,13 @@ export const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={openRegisterModal}
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-8 py-3.5 rounded border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-mono text-sm transition-all bg-slate-900/60 cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-8 py-3.5 rounded border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-mono font-semibold tracking-wide text-sm transition-all bg-slate-900/60 cursor-pointer"
             >
               <span>REQUEST ACCESS</span>
             </button>
           </div>
 
-          <div className="text-[11px] font-mono text-slate-500 pt-6">
+          <div className="text-[11px] font-mono font-semibold tracking-wide text-slate-500 pt-6">
             HIGH-RELIABILITY ARCHITECTURE • ZERO COMPROMISE PRIVACY • SOC-2 TYPE II READY
           </div>
         </div>
@@ -1351,12 +1352,12 @@ export const LandingPage: React.FC = () => {
                 <div className="w-6 h-6 rounded border border-cyan-500/40 bg-cyan-950 flex items-center justify-center text-cyan-400">
                   <Shield className="w-3.5 h-3.5" />
                 </div>
-                <span className="font-mono font-bold text-white text-sm">PRECURSOR-X</span>
+                <span className="font-mono font-bold tracking-wide text-white text-sm">PRECURSOR-X</span>
               </div>
               <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
                 Operational Safety Intelligence & High-Reliability Precursor Analytics for Energy, Industrial, and Critical Infrastructure.
               </p>
-              <div className="pt-2 font-mono text-[10px] text-slate-400 flex items-center space-x-2">
+              <div className="pt-2 font-mono font-semibold tracking-wide text-[10px] text-slate-400 flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                 <span>SYSTEM ONLINE v4.8</span>
               </div>
@@ -1364,7 +1365,7 @@ export const LandingPage: React.FC = () => {
 
             {/* Links 1 */}
             <div>
-              <div className="font-mono text-white text-xs font-semibold mb-3 tracking-wider">PLATFORM</div>
+              <div className="font-mono text-white text-xs font-bold mb-3 tracking-wider">PLATFORM</div>
               <ul className="space-y-2 font-sans">
                 <li>
                   <button onClick={() => handleCapabilityClick('/dashboard')} className="hover:text-cyan-400 transition-colors cursor-pointer text-left">
@@ -1391,7 +1392,7 @@ export const LandingPage: React.FC = () => {
 
             {/* Links 2 */}
             <div>
-              <div className="font-mono text-white text-xs font-semibold mb-3 tracking-wider">INTELLIGENCE</div>
+              <div className="font-mono text-white text-xs font-bold mb-3 tracking-wider">INTELLIGENCE</div>
               <ul className="space-y-2 font-sans">
                 <li>
                   <button onClick={() => handleCapabilityClick('/what-changed')} className="hover:text-cyan-400 transition-colors cursor-pointer text-left">
@@ -1418,7 +1419,7 @@ export const LandingPage: React.FC = () => {
 
             {/* Links 3 */}
             <div>
-              <div className="font-mono text-white text-xs font-semibold mb-3 tracking-wider">COMPLIANCE</div>
+              <div className="font-mono text-white text-xs font-bold mb-3 tracking-wider">COMPLIANCE</div>
               <ul className="space-y-2 font-sans">
                 <li>
                   <a href="#how-it-works" className="hover:text-cyan-400 transition-colors">
@@ -1444,7 +1445,7 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-slate-500">
+          <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono font-semibold tracking-wide text-slate-500">
             <div>&copy; 2025 PRECURSOR-X Safety Intelligence Platform. All rights reserved.</div>
             <div className="mt-2 sm:mt-0 flex space-x-6">
               <span className="text-cyan-500/80">DEMO ENVIRONMENT • SYNTHETIC DATA</span>

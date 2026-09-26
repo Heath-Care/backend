@@ -866,7 +866,7 @@ export const ReportAnalyzerPage: React.FC = () => {
           {/* Risk Gauge & SIF Severity Hero Header Card */}
           <div className="bg-surface-container-low rounded-xl p-space-lg shadow-md flex flex-col md:flex-row items-center justify-between gap-space-lg border border-surface-container-high/40">
             {/* Radial Gauge & Score */}
-            <div className="flex items-center gap-space-lg w-full md:w-auto">
+            <div className="flex items-center gap-space-lg w-full md:flex-1 min-w-0">
               <div className="relative w-28 h-28 flex items-center justify-center shrink-0">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                   <circle
@@ -908,10 +908,10 @@ export const ReportAnalyzerPage: React.FC = () => {
                     {analysisResult ? (analysisResult.sifScorePct >= 70 ? 'High Potential SIF (pSIF)' : 'Moderate Exposure') : 'Awaiting Extraction'}
                   </span>
                 </div>
-                <h2 className="font-headline-md text-headline-md text-on-surface font-semibold truncate">
+                <h2 className="font-headline-md text-headline-md text-on-surface font-semibold break-words [overflow-wrap:anywhere]">
                   {analysisResult?.title || (isAnalyzing ? 'Extracting Precursors...' : 'Ready for Analysis')}
                 </h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
+                <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 break-words [overflow-wrap:anywhere]">
                   {analysisResult
                     ? analysisResult.explanation
                     : (isAnalyzing ? 'Tokenizing incident taxonomy and evaluating barrier health against institutional safety memory...' : 'Input operational narrative and execute AI extraction to analyze latent SIF exposure.')}
@@ -969,17 +969,17 @@ export const ReportAnalyzerPage: React.FC = () => {
                   analysisResult!.hazards.map((h, i) => (
                     <div
                       key={i}
-                      className="p-space-sm rounded-lg bg-surface-container flex items-center justify-between"
+                      className="p-space-sm rounded-lg bg-surface-container flex items-center justify-between gap-space-sm"
                     >
-                      <div className="flex flex-col">
-                        <span className="font-body-sm text-body-sm text-on-surface font-medium">
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-body-sm text-body-sm text-on-surface font-medium break-words [overflow-wrap:anywhere]">
                           {h.name}
                         </span>
-                        <span className="font-label-code-sm text-label-code-sm text-outline">
+                        <span className="font-label-code-sm text-label-code-sm text-outline break-words [overflow-wrap:anywhere]">
                           {h.threshold}
                         </span>
                       </div>
-                      <span className="material-symbols-outlined text-rose-400 text-[16px]">
+                      <span className="material-symbols-outlined text-rose-400 text-[16px] shrink-0">
                         priority_high
                       </span>
                     </div>
@@ -1031,11 +1031,11 @@ export const ReportAnalyzerPage: React.FC = () => {
                       <span className="material-symbols-outlined text-amber-400 text-[16px] shrink-0 mt-0.5">
                         error_outline
                       </span>
-                      <div className="flex flex-col">
-                        <span className="font-body-sm text-body-sm text-on-surface font-medium">
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-body-sm text-body-sm text-on-surface font-medium break-words [overflow-wrap:anywhere]">
                           {p.name}
                         </span>
-                        <span className="font-label-code-sm text-label-code-sm text-outline">
+                        <span className="font-label-code-sm text-label-code-sm text-outline break-words [overflow-wrap:anywhere]">
                           {p.evidence}
                         </span>
                       </div>
@@ -1085,11 +1085,11 @@ export const ReportAnalyzerPage: React.FC = () => {
                   analysisResult!.barrierFailures.map((b, i) => (
                     <div
                       key={i}
-                      className="p-space-sm rounded-lg bg-surface-container flex items-center justify-between"
+                      className="p-space-sm rounded-lg bg-surface-container flex items-center justify-between gap-space-sm"
                     >
-                      <span className="font-body-sm text-body-sm text-on-surface">{b.name}</span>
+                      <span className="font-body-sm text-body-sm text-on-surface min-w-0 break-words [overflow-wrap:anywhere]">{b.name}</span>
                       <span
-                        className={`px-space-xs py-0.5 rounded font-label-code-sm text-label-code-sm font-semibold ${
+                        className={`px-space-xs py-0.5 rounded font-label-code-sm text-label-code-sm font-semibold shrink-0 ${
                           b.status === 'FAILED'
                             ? 'bg-rose-950/80 text-rose-300'
                             : b.status === 'BYPASSED'
@@ -1133,11 +1133,11 @@ export const ReportAnalyzerPage: React.FC = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <div className="p-space-sm rounded-lg bg-surface-container flex items-center justify-between">
-                  <span className="font-body-sm text-body-sm text-on-surface">
+                <div className="p-space-sm rounded-lg bg-surface-container flex items-center justify-between gap-space-sm">
+                  <span className="font-body-sm text-body-sm text-on-surface min-w-0 break-words [overflow-wrap:anywhere]">
                     {analysisResult?.consequences?.[0]?.title || (isAnalyzing ? 'Modeling consequences...' : 'Not Recorded')}
                   </span>
-                  <span className="font-label-code-sm text-label-code-sm text-rose-400 font-bold uppercase">
+                  <span className="font-label-code-sm text-label-code-sm text-rose-400 font-bold uppercase shrink-0">
                     {analysisResult?.consequences?.[0]?.severity || 'N/A'}
                   </span>
                 </div>

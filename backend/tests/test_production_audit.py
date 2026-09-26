@@ -31,7 +31,13 @@ from fastapi.testclient import TestClient
 
 from app.ai.groq_client import GroqAPIError, GroqClient, GroqConfigurationError
 from app.core.config import Settings, settings
-from app.db.seed import seed_database
+from app.data.seed_data import WHAT_CHANGED_DATA
+from app.data.seed_generator import (
+    SEED_WHAT_CHANGED_SNAPSHOT_ID,
+    generate_sif_precursor_velocity_series,
+    is_velocity_series_stale,
+)
+from app.db.seed import _synchronize_seed_telemetry_snapshot, seed_database
 from app.db.session import get_db
 from app.main import app
 from app.models.entities import (
@@ -42,6 +48,7 @@ from app.models.entities import (
     SafetyReport,
     SafetyRule,
     User,
+    WhatChangedSnapshot,
 )
 
 STRONG_SECRET = "c84f689e83f219dbca4718c4e09f582da7324"
@@ -533,6 +540,156 @@ def test_repeated_seed_does_not_duplicate_or_overwrite_real_records():
 
         # restore for other tests
         db.query(Facility).filter(Facility.name == "Edited Real Facility").first().name = fac_name
+        db.commit()
+
+
+def test_seed_telemetry_snapshot_synchronizes_stale_curve_and_is_idempotent():
+    """
+    Regression test for automatic WhatChangedSnapshot telemetry synchronization
+    (app/db/seed.py: _synchronize_seed_telemetry_snapshot), which runs on every
+    application startup via seed_database() -> lifespan().
+
+    Proves:
+      - a pre-existing/legacy WhatChangedSnapshot curve (as an existing production
+        database created before the 16-week generator existed would still be serving)
+        gets synchronized to the current generate_sif_precursor_velocity_series() output
+      - the synchronized final value matches live SUM(Facility.sif_precursors) — the same
+        number the Dashboard's "Active SIF Precursors" tile reports
+      - values come exclusively from generate_sif_precursor_velocity_series() (no second
+        algorithm, nothing invented in the sync step itself)
+      - running synchronization twice in a row is idempotent: no duplicate snapshot row,
+        curve unchanged the second time
+      - unrelated records (Facility rows, HumanReview rows, other snapshot fields) are
+        completely untouched by the synchronization
+    """
+    with _DbSession() as db:
+        target_current = sum(f.sif_precursors or 0 for f in db.query(Facility).all())
+
+        snap = db.query(WhatChangedSnapshot).filter(
+            WhatChangedSnapshot.id == SEED_WHAT_CHANGED_SNAPSHOT_ID
+        ).first()
+        assert snap is not None
+
+        # Baselines for "unrelated records/fields must be untouched" assertions.
+        facility_count_before = db.query(Facility).count()
+        human_review_count_before = db.query(HumanReview).count()
+        snapshot_count_before = db.query(WhatChangedSnapshot).count()
+        key_shift_observation_before = snap.key_shift_observation
+        baseline_integrity_before = snap.baseline_integrity
+        original_curve = snap.divergence_curve
+        original_acceleration = snap.precursor_acceleration
+
+        # Simulate an old production row inserted before the 16-week generator existed:
+        # a short, legacy-shaped curve whose final value has drifted from the live total.
+        legacy_curve = [
+            {"week": "Wk 09", "precursorVolume": 1, "baselineThreshold": 150, "highEnergySpikes": 0},
+            {"week": "Wk 10", "precursorVolume": 2, "baselineThreshold": 150, "highEnergySpikes": 0},
+            {"week": "Wk 11", "precursorVolume": 3, "baselineThreshold": 150, "highEnergySpikes": 0},
+        ]
+        snap.divergence_curve = legacy_curve
+        snap.precursor_acceleration = "+0.0%"
+        db.commit()
+        assert is_velocity_series_stale(legacy_curve, target_current) is True
+
+        # Act: run the exact synchronization seed_database() performs on every startup.
+        _synchronize_seed_telemetry_snapshot(db)
+
+        db.refresh(snap)
+        assert len(snap.divergence_curve) == 16
+        assert snap.divergence_curve[-1]["precursorVolume"] == target_current
+        expected_curve = generate_sif_precursor_velocity_series(
+            target_current=target_current, weeks=16, executive_threshold=150
+        )
+        assert snap.divergence_curve == expected_curve  # same generator, no second algorithm
+
+        # Idempotency: a second sync call performs no further changes.
+        curve_after_first_sync = list(snap.divergence_curve)
+        _synchronize_seed_telemetry_snapshot(db)
+        db.refresh(snap)
+        assert snap.divergence_curve == curve_after_first_sync
+        assert db.query(WhatChangedSnapshot).count() == snapshot_count_before
+
+        # The real startup path (seed_database, as lifespan() calls it) is also a no-op here.
+        seed_database(force=False, db=db)
+        db.refresh(snap)
+        assert snap.divergence_curve == curve_after_first_sync
+        assert db.query(WhatChangedSnapshot).count() == snapshot_count_before
+
+        # Unrelated records/fields untouched.
+        assert db.query(Facility).count() == facility_count_before
+        assert db.query(HumanReview).count() == human_review_count_before
+        assert snap.key_shift_observation == key_shift_observation_before
+        assert snap.baseline_integrity == baseline_integrity_before
+
+        # Restore original state so other tests reading this snapshot are unaffected.
+        snap.divergence_curve = original_curve
+        snap.precursor_acceleration = original_acceleration
+        db.commit()
+
+
+def test_seed_telemetry_synchronization_is_a_true_noop_when_already_in_sync():
+    """
+    Running synchronization against an already-correct snapshot (the normal case on every
+    Render restart once the fix has been deployed once) must change nothing at all.
+    """
+    with _DbSession() as db:
+        snap = db.query(WhatChangedSnapshot).filter(
+            WhatChangedSnapshot.id == SEED_WHAT_CHANGED_SNAPSHOT_ID
+        ).first()
+        assert snap is not None
+        curve_before = list(snap.divergence_curve)
+        acceleration_before = snap.precursor_acceleration
+
+        _synchronize_seed_telemetry_snapshot(db)
+
+        db.refresh(snap)
+        assert snap.divergence_curve == curve_before
+        assert snap.precursor_acceleration == acceleration_before
+
+
+def test_seed_telemetry_synchronization_refuses_ambiguous_snapshot_state():
+    """
+    If more than one WhatChangedSnapshot row exists, or the sole row does not carry the
+    known seed-owned id, the synchronization must refuse to act rather than guess which
+    row (if any) is safe to overwrite.
+    """
+    with _DbSession() as db:
+        real_snap = db.query(WhatChangedSnapshot).filter(
+            WhatChangedSnapshot.id == SEED_WHAT_CHANGED_SNAPSHOT_ID
+        ).first()
+        real_curve_before = list(real_snap.divergence_curve)
+
+        decoy = WhatChangedSnapshot(
+            id="snap-unexpected-decoy",
+            baseline_period="Decoy",
+            active_period="Decoy",
+            precursor_acceleration="+0.0%",
+            events_in_active=0,
+            events_in_baseline=0,
+            barrier_integrity_drop="N/A",
+            baseline_integrity=0.0,
+            current_integrity=0.0,
+            emergent_failure_modes=0,
+            high_energy_spikes=0,
+            key_shift_observation="decoy",
+            divergence_curve=[{"week": "Wk 01", "precursorVolume": 1}],
+            flagged_precursors=[],
+        )
+        db.add(decoy)
+        db.commit()
+
+        _synchronize_seed_telemetry_snapshot(db)  # must no-op: 2 rows now exist
+
+        db.refresh(real_snap)
+        decoy_after = db.query(WhatChangedSnapshot).filter(
+            WhatChangedSnapshot.id == "snap-unexpected-decoy"
+        ).first()
+        assert real_snap.divergence_curve == real_curve_before  # untouched
+        assert decoy_after is not None
+        assert decoy_after.divergence_curve == [{"week": "Wk 01", "precursorVolume": 1}]  # untouched
+
+        # cleanup for other tests
+        db.delete(decoy_after)
         db.commit()
 
 

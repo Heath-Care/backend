@@ -408,10 +408,10 @@ export const KnowledgeGraphPage: React.FC = () => {
                   setLayoutMode(mode);
                   showToast(`Switched layout to ${mode.toUpperCase()}`);
                 }}
-                className={`px-3 py-1 rounded font-label-code-sm text-label-code-sm capitalize transition-all ${
+                className={`px-3 py-1 rounded font-label-code-sm text-label-code-sm uppercase tracking-wider transition-all ${
                   layoutMode === mode
-                    ? 'bg-primary-container text-on-primary-container font-semibold'
-                    : 'text-outline hover:text-on-surface'
+                    ? 'bg-primary-container text-on-primary-container font-bold'
+                    : 'text-outline hover:text-on-surface font-semibold'
                 }`}
               >
                 {mode === 'force' ? 'Force-Directed' : mode === 'causal' ? 'Causal Chain' : 'Barrier Tree'}
@@ -672,7 +672,7 @@ export const KnowledgeGraphPage: React.FC = () => {
           ) : (
             <>
               <div className="flex items-center justify-between pb-space-xs border-b border-surface-container-high/30">
-                <span className="font-label-code-sm text-label-code-sm text-outline uppercase font-semibold">
+                <span className="font-label-code-sm text-label-code-sm text-outline uppercase tracking-wide font-semibold">
                   Node Inspector // Relational Entity
                 </span>
                 <span className="px-2 py-0.5 rounded font-label-code-sm text-label-code-sm uppercase font-bold bg-surface-container text-primary">
@@ -740,7 +740,7 @@ export const KnowledgeGraphPage: React.FC = () => {
 
           {/* Upstream / Downstream Relationships */}
           <div className="flex flex-col gap-space-xs">
-            <span className="font-label-code-sm text-label-code-sm text-outline uppercase font-semibold">
+            <span className="font-label-code-sm text-label-code-sm text-outline uppercase tracking-wide font-semibold">
               Causal Pathway Intersections
             </span>
             <div className="space-y-1.5">

@@ -115,15 +115,32 @@ def get_dashboard_summary(
     )
 
 
+def _trailing_point_count(timeframe: Optional[str]) -> int:
+    """
+    Maps the Dashboard's time-range selector to how many trailing weekly telemetry
+    points to return. The underlying series is weekly, so "7D"/"30D" resolve to the
+    nearest few trailing weeks rather than a literal daily window.
+    """
+    tf = (timeframe or "12W").strip().upper()
+    return {
+        "7D": 2,
+        "30D": 5,
+        "12W": 12,
+        "Q3": 13,
+    }.get(tf, 12)
+
+
 @router.get("/telemetry", response_model=List[DashboardTelemetryPoint], summary="Get Precursor Telemetry Velocity Curve")
 def get_dashboard_telemetry(
     timeframe: Optional[str] = Query("12W", description="Timeframe filter"),
     db: Session = Depends(get_db)
 ) -> List[DashboardTelemetryPoint]:
     """
-    Returns weekly precursor velocity telemetry points derived strictly from database snapshot series or events.
+    Returns weekly precursor velocity telemetry points derived strictly from database snapshot series or events,
+    trimmed to the trailing window implied by `timeframe` (7D, 30D, 12W, Q3).
     Lineage: DATABASE_DERIVED
     """
+    point_count = _trailing_point_count(timeframe)
     snapshot = db.query(WhatChangedSnapshot).first()
     if snapshot and snapshot.divergence_curve:
         points = []
@@ -144,32 +161,39 @@ def get_dashboard_telemetry(
                     )
                 )
         if points:
-            return points
+            return points[-point_count:] if len(points) > point_count else points
 
-    # If no snapshot telemetry exists, check SafetyEvent records
-    events = db.query(SafetyEvent).all()
+    # If no snapshot telemetry exists, check SafetyEvent records, grouped by the real
+    # calendar week they were recorded in (not a substring of the record's id).
+    events = db.query(SafetyEvent).order_by(SafetyEvent.created_at.asc()).all()
     if not events:
         return []
 
-    # Group events dynamically by identifier
     buckets: dict = {}
+    order: List[str] = []
     for ev in events:
-        period_key = f"Wk {ev.id.split('-')[-1][:2]}" if "-" in ev.id else "Current"
+        if ev.created_at is not None:
+            iso_year, iso_week, _ = ev.created_at.isocalendar()
+            period_key = f"Wk {iso_week:02d}"
+        else:
+            period_key = "Current"
         if period_key not in buckets:
             buckets[period_key] = {"volume": 0, "spikes": 0}
+            order.append(period_key)
         buckets[period_key]["volume"] += 1
-        if ev.consequence >= 4:
+        if ev.consequence is not None and ev.consequence >= 4:
             buckets[period_key]["spikes"] += 1
 
-    return [
+    all_points = [
         DashboardTelemetryPoint(
             week=wk,
-            precursorVolume=b["volume"],
+            precursorVolume=buckets[wk]["volume"],
             baselineThreshold=settings.EXECUTIVE_SIF_THRESHOLD if settings.EXECUTIVE_SIF_THRESHOLD is not None else 0,
-            highEnergySpikes=b["spikes"]
+            highEnergySpikes=buckets[wk]["spikes"]
         )
-        for wk, b in buckets.items()
+        for wk in order
     ]
+    return all_points[-point_count:] if len(all_points) > point_count else all_points
 
 
 @router.get("/facilities", response_model=List[SiteAssetSchema], summary="Get Facility Risk Rankings")

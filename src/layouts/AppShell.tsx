@@ -141,7 +141,7 @@ export const AppShell: React.FC = () => {
                 PRECURSOR-X
               </span>
               <span className="font-label-code-sm text-label-code-sm text-primary uppercase tracking-widest">
-                Safety OS v4.8
+                Safety Intelligence Platform
               </span>
             </div>
           </div>
@@ -276,7 +276,7 @@ export const AppShell: React.FC = () => {
         <header className="fixed top-0 left-0 lg:left-72 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl z-40 shadow-[0_1px_8px_rgba(0,0,0,0.3)] border-b border-surface-container-high/30">
           <div className="h-16 w-full px-3 sm:px-space-md lg:px-space-xl flex items-center justify-between gap-2 sm:gap-space-md">
             {/* Mobile menu button & breadcrumbs */}
-            <div className="flex items-center gap-2 sm:gap-space-md flex-1 min-w-0 max-w-xl">
+            <div className="flex items-center gap-2 sm:gap-space-md flex-1 min-w-0 max-w-2xl">
               <button
                 aria-label="Open navigation menu"
                 className="lg:hidden p-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors shrink-0"
@@ -285,18 +285,8 @@ export const AppShell: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">menu</span>
               </button>
 
-              <div className="hidden lg:flex items-center gap-space-xs whitespace-nowrap shrink-0">
-                <span className="font-label-code-sm text-label-code-sm text-on-surface-variant uppercase tracking-wider font-semibold">
-                  PRECURSOR-X
-                </span>
-                <span className="text-outline font-label-code-sm text-label-code-sm">/</span>
-                <span className="font-label-code-sm text-label-code-sm text-primary font-medium tracking-wide">
-                  Safety Intelligence Platform
-                </span>
-              </div>
-
               {/* Global Search Bar */}
-              <div className="relative flex-1 min-w-0 max-w-md">
+              <div className="relative flex-1 min-w-0 max-w-2xl">
                 <span className="material-symbols-outlined absolute left-2.5 sm:left-space-md top-1/2 -translate-y-1/2 text-outline text-[16px] sm:text-[18px]">
                   search
                 </span>
